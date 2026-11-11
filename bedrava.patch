@@ -1,0 +1,2928 @@
+From 6fd1d390e73d8c7543cd25f6fd7a67cf38e343cf Mon Sep 17 00:00:00 2001
+From: Bedrava <bedrava@local>
+Date: Wed, 11 Nov 2026 21:07:09 +0000
+Subject: [PATCH] =?UTF-8?q?Bedrava:=20interfaz=20estilo=20Bedrock,=20contr?=
+ =?UTF-8?q?oles=20t=C3=A1ctiles,=20optimizaci=C3=B3n=20por=20gama=20y=20pa?=
+ =?UTF-8?q?ck=20de=20rendimiento?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ BEDRAVA.md                                    |  23 +
+ ZalithLauncher/build.gradle.kts               |   3 +-
+ ZalithLauncher/gradle.properties              |   8 +-
+ .../src/main/assets/default_layout.json       | 902 ++++++------------
+ .../main/assets/legal/OFL-PixelifySans.txt    |  93 ++
+ .../game/download/addon/BedravaBoostPack.kt   | 144 +++
+ .../zalithlauncher/game/launch/MCOptions.kt   |  12 +-
+ .../zalithlauncher/setting/AllSettings.kt     |  13 +-
+ .../setting/BedravaPerformance.kt             | 121 +++
+ .../setting/SettingsInitializer.kt            |   5 +-
+ .../ui/components/BedravaBoostButton.kt       |  86 ++
+ .../ui/screens/content/LauncherScreen.kt      |  31 +-
+ .../settings/LauncherSettingsScreen.kt        |   1 +
+ .../zalithlauncher/ui/theme/BedrockTheme.kt   | 141 +++
+ .../zalithlauncher/ui/theme/ColorTheme.kt     |   1 +
+ .../ui/theme/NativeThemeUtils.kt              |   1 +
+ .../movtery/zalithlauncher/ui/theme/Theme.kt  |   4 +
+ .../movtery/zalithlauncher/ui/theme/Type.kt   |  34 +-
+ .../ui/theme/components/BedrockButton.kt      | 122 +++
+ .../src/main/res/font/pixel_sans_400.ttf      | Bin 0 -> 23836 bytes
+ .../src/main/res/font/pixel_sans_700.ttf      | Bin 0 -> 23532 bytes
+ .../main/res/values-es/strings_bedrava.xml    |  10 +
+ .../src/main/res/values/strings_bedrava.xml   |  10 +
+ 23 files changed, 1136 insertions(+), 629 deletions(-)
+ create mode 100644 BEDRAVA.md
+ create mode 100644 ZalithLauncher/src/main/assets/legal/OFL-PixelifySans.txt
+ create mode 100644 ZalithLauncher/src/main/java/com/movtery/zalithlauncher/game/download/addon/BedravaBoostPack.kt
+ create mode 100644 ZalithLauncher/src/main/java/com/movtery/zalithlauncher/setting/BedravaPerformance.kt
+ create mode 100644 ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/components/BedravaBoostButton.kt
+ create mode 100644 ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/BedrockTheme.kt
+ create mode 100644 ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/components/BedrockButton.kt
+ create mode 100644 ZalithLauncher/src/main/res/font/pixel_sans_400.ttf
+ create mode 100644 ZalithLauncher/src/main/res/font/pixel_sans_700.ttf
+ create mode 100644 ZalithLauncher/src/main/res/values-es/strings_bedrava.xml
+ create mode 100644 ZalithLauncher/src/main/res/values/strings_bedrava.xml
+
+diff --git a/BEDRAVA.md b/BEDRAVA.md
+new file mode 100644
+index 0000000..53160e1
+--- /dev/null
++++ b/BEDRAVA.md
+@@ -0,0 +1,23 @@
++# Bedrava
++
++**Bedrava** es una versión modificada **no oficial** de [Zalith Launcher 2](https://github.com/ZalithLauncher/ZalithLauncher2) (GPL-3.0) para jugar Minecraft: Java Edition en Android con estilo Bedrock.
++
++No incluye ningún archivo de Mojang: el juego se descarga de los servidores oficiales al iniciar sesión con una cuenta que tenga Minecraft: Java Edition.
++
++## Qué cambia respecto de Zalith Launcher 2
++
++- **Interfaz estilo Bedrock**: tema oscuro gris/verde (nuevo tema "Bedrock", elegido por defecto), esquinas rectas, fuente pixel (Pixelify Sans, SIL OFL 1.1) en títulos y botones, y botón "Jugar" con bisel.
++- **Controles táctiles estilo Bedrock** (`assets/default_layout.json`): joystick abajo a la izquierda (empujar a fondo = correr), salto grande, agacharse, inventario junto a la barra rápida, pausa, chat, cámara, menú y una capa de extras (soltar, jugadores, HUD, F3, teclado). Gestos activados por defecto: tocar = poner/usar, mantener = romper/atacar.
++- **Optimización automática según la gama del celular** (`setting/BedravaPerformance.kt`): resolución interna, RAM, rendimiento sostenido y opciones gráficas iniciales (distancia de render, partículas, nubes, FPS máximos) para cada versión nueva.
++- **Pack de rendimiento** (`game/download/addon/BedravaBoostPack.kt`): botón que descarga desde Modrinth la última versión compatible de Sodium, Lithium, FerriteCore, ModernFix, Entity Culling, ImmediatelyFast, More Culling, Dynamic FPS, Iris, Bedrockify y Fabric API, más el shader liviano MakeUp Ultra Fast.
++- Nombre e identificador propios (`com.multi.bedrava`), y aviso de versión modificada no oficial en la pantalla principal, como pide la licencia.
++
++## Compilar
++
++Con GitHub Actions: al subir el código, el workflow **Build CI** compila el APK (Debug) y lo deja en la pestaña *Actions → (la ejecución) → Artifacts*.
++
++Para iniciar sesión con Microsoft hace falta un **OAuth Client ID** propio (Azure) con acceso a la API de Minecraft aprobado por Mojang. Se carga como secret `OAUTH_CLIENT_ID` del repositorio.
++
++## Licencia
++
++GPL-3.0, igual que Zalith Launcher 2. Se conservan todos los avisos de copyright originales.
+diff --git a/ZalithLauncher/build.gradle.kts b/ZalithLauncher/build.gradle.kts
+index c54fc7e..60061b5 100644
+--- a/ZalithLauncher/build.gradle.kts
++++ b/ZalithLauncher/build.gradle.kts
+@@ -129,8 +129,7 @@ android {
+     }
+ 
+     defaultConfig {
+-        applicationId = zalithPackageName
+-        applicationIdSuffix = ".v2"
++        applicationId = "com.multi.bedrava"
+         minSdk = 26
+         targetSdk = 34
+         versionCode = launcherVersionCode
+diff --git a/ZalithLauncher/gradle.properties b/ZalithLauncher/gradle.properties
+index 03f7f26..f2945b0 100644
+--- a/ZalithLauncher/gradle.properties
++++ b/ZalithLauncher/gradle.properties
+@@ -1,7 +1,7 @@
+ # launcher name & url
+-launcher_name=ZalithLauncher
+-launcher_app_name=Zalith Launcher
+-launcher_short_name=ZL2
++launcher_name=Bedrava
++launcher_app_name=Bedrava
++launcher_short_name=BDV
+ url_home=https://github.com/ZalithLauncher/ZalithLauncher2
+ 
+ # your OAuth client id
+@@ -16,4 +16,4 @@ default_key_password=sfv72ghSSNQaadf99-Q69!2
+ 
+ # launcher version
+ launcher_version_code=200049
+-launcher_version_name=2.8.2
+\ No newline at end of file
++launcher_version_name=1.0.0
+\ No newline at end of file
+diff --git a/ZalithLauncher/src/main/assets/default_layout.json b/ZalithLauncher/src/main/assets/default_layout.json
+index 577451e..63236b6 100644
+--- a/ZalithLauncher/src/main/assets/default_layout.json
++++ b/ZalithLauncher/src/main/assets/default_layout.json
+@@ -1,117 +1,97 @@
+ {
+     "info": {
+         "name": {
+-            "default": "default",
++            "default": "Bedrock",
+             "matchQueue": [
+                 {
+-                    "language_tag": "zh",
+-                    "value": "預設"
+-                },
+-                {
+-                    "language_tag": "zh-CN",
+-                    "value": "默认"
++                    "language_tag": "es",
++                    "value": "Bedrock"
+                 }
+             ]
+         },
+         "author": {
+-            "default": "MovTery",
++            "default": "Bedrava",
++            "matchQueue": []
++        },
++        "description": {
++            "default": "Bedrock-style touch controls: tap to place/use, hold to break/attack.",
+             "matchQueue": [
+                 {
+-                    "language_tag": "zh",
+-                    "value": "墨北Mov"
++                    "language_tag": "es",
++                    "value": "Controles táctiles estilo Bedrock: tocar para poner/usar, mantener para romper/atacar."
+                 }
+             ]
+         },
+-        "description": {
+-            "default": "",
+-            "matchQueue": []
+-        },
+-        "versionCode": 0,
+-        "versionName": "2.0"
++        "versionCode": 1,
++        "versionName": "1.0"
+     },
+     "layers": [
+         {
+-            "name": "gui",
+-            "uuid": "6df122c8cbf3",
++            "name": "bedrock_hud",
++            "uuid": "b3d70c4a2001",
+             "hide": false,
+-            "visibilityType": "always",
++            "visibilityType": "in_game",
+             "normalButtons": [
+                 {
+                     "text": {
+-                        "default": "GUI",
++                        "default": "II",
+                         "matchQueue": []
+                     },
+-                    "uuid": "166b980299c8420ab8",
++                    "uuid": "bd0000b3d70c000001",
+                     "position": {
+-                        "x": 10000,
++                        "x": 0,
+                         "y": 0
+                     },
+                     "buttonSize": {
+                         "type": "percentage",
+                         "widthDp": 50.0,
+                         "heightDp": 50.0,
+-                        "widthPercentage": 2289,
+-                        "heightPercentage": 1100,
++                        "widthPercentage": 1300,
++                        "heightPercentage": 1300,
+                         "widthReference": "screen_height",
+                         "heightReference": "screen_height"
+                     },
+-                    "buttonStyle": "cac8c754ffa0",
++                    "buttonStyle": "b3d70c4a11e1",
+                     "visibilityType": "always",
+                     "clickEvents": [
+                         {
+-                            "type": "switch_layer",
+-                            "key": "b7859a69d0d3"
+-                        },
+-                        {
+-                            "type": "switch_layer",
+-                            "key": "9cad88ccdb1c"
+-                        },
+-                        {
+-                            "type": "switch_layer",
+-                            "key": "81548d8b5adb"
+-                        },
+-                        {
+-                            "type": "switch_layer",
+-                            "key": "befebb63d5bf"
++                            "type": "key",
++                            "key": "GLFW_KEY_ESCAPE"
+                         }
+                     ],
+                     "isSwipple": false,
+                     "isPenetrable": false,
+                     "isToggleable": false
+-                }
+-            ]
+-        },
+-        {
+-            "name": "tab",
+-            "uuid": "b7859a69d0d3",
+-            "hide": false,
+-            "visibilityType": "always",
+-            "normalButtons": [
++                },
+                 {
+                     "text": {
+-                        "default": "Esc",
++                        "default": "Chat",
+                         "matchQueue": []
+                     },
+-                    "uuid": "9f74414211ff444684",
++                    "uuid": "bd0000b3d70c000002",
+                     "position": {
+-                        "x": 0,
++                        "x": 1000,
+                         "y": 0
+                     },
+                     "buttonSize": {
+                         "type": "percentage",
+                         "widthDp": 50.0,
+                         "heightDp": 50.0,
+-                        "widthPercentage": 2289,
+-                        "heightPercentage": 1100,
++                        "widthPercentage": 1700,
++                        "heightPercentage": 1300,
+                         "widthReference": "screen_height",
+                         "heightReference": "screen_height"
+                     },
+-                    "buttonStyle": "43f4fb63f80a",
++                    "buttonStyle": "b3d70c4a11e1",
+                     "visibilityType": "always",
+                     "clickEvents": [
+                         {
+                             "type": "key",
+-                            "key": "GLFW_KEY_ESCAPE"
++                            "key": "GLFW_KEY_T"
++                        },
++                        {
++                            "type": "launcher_event",
++                            "key": "launcher.event.switch_ime"
+                         }
+                     ],
+                     "isSwipple": false,
+@@ -120,29 +100,34 @@
+                 },
+                 {
+                     "text": {
+-                        "default": "E",
+-                        "matchQueue": []
++                        "default": "View",
++                        "matchQueue": [
++                            {
++                                "language_tag": "es",
++                                "value": "Vista"
++                            }
++                        ]
+                     },
+-                    "uuid": "9743e67ed3be4b8bbd",
++                    "uuid": "bd0000b3d70c000003",
+                     "position": {
+-                        "x": 7330,
+-                        "y": 10000
++                        "x": 2250,
++                        "y": 0
+                     },
+                     "buttonSize": {
+                         "type": "percentage",
+                         "widthDp": 50.0,
+                         "heightDp": 50.0,
+-                        "widthPercentage": 1200,
+-                        "heightPercentage": 1200,
++                        "widthPercentage": 1700,
++                        "heightPercentage": 1300,
+                         "widthReference": "screen_height",
+                         "heightReference": "screen_height"
+                     },
+-                    "buttonStyle": "cac8c754ffa0",
++                    "buttonStyle": "b3d70c4a11e1",
+                     "visibilityType": "always",
+                     "clickEvents": [
+                         {
+                             "type": "key",
+-                            "key": "GLFW_KEY_E"
++                            "key": "GLFW_KEY_F5"
+                         }
+                     ],
+                     "isSwipple": false,
+@@ -151,29 +136,29 @@
+                 },
+                 {
+                     "text": {
+-                        "default": "F3",
++                        "default": "•••",
+                         "matchQueue": []
+                     },
+-                    "uuid": "8d52b73e45504bc291",
++                    "uuid": "bd0000b3d70c000004",
+                     "position": {
+-                        "x": 1154,
++                        "x": 8900,
+                         "y": 0
+                     },
+                     "buttonSize": {
+                         "type": "percentage",
+                         "widthDp": 50.0,
+                         "heightDp": 50.0,
+-                        "widthPercentage": 2289,
+-                        "heightPercentage": 1100,
++                        "widthPercentage": 1300,
++                        "heightPercentage": 1300,
+                         "widthReference": "screen_height",
+                         "heightReference": "screen_height"
+                     },
+-                    "buttonStyle": "d1096cf91caa",
++                    "buttonStyle": "b3d70c4a11e1",
+                     "visibilityType": "always",
+                     "clickEvents": [
+                         {
+-                            "type": "key",
+-                            "key": "GLFW_KEY_F3"
++                            "type": "switch_layer",
++                            "key": "b3d70c4a2002"
+                         }
+                     ],
+                     "isSwipple": false,
+@@ -182,29 +167,29 @@
+                 },
+                 {
+                     "text": {
+-                        "default": "F5",
++                        "default": "≡",
+                         "matchQueue": []
+                     },
+-                    "uuid": "cdc5a1325c034b96ae",
++                    "uuid": "bd0000b3d70c000005",
+                     "position": {
+-                        "x": 2308,
++                        "x": 10000,
+                         "y": 0
+                     },
+                     "buttonSize": {
+                         "type": "percentage",
+                         "widthDp": 50.0,
+                         "heightDp": 50.0,
+-                        "widthPercentage": 2289,
+-                        "heightPercentage": 1100,
++                        "widthPercentage": 1300,
++                        "heightPercentage": 1300,
+                         "widthReference": "screen_height",
+                         "heightReference": "screen_height"
+                     },
+-                    "buttonStyle": "21b054786830",
++                    "buttonStyle": "b3d70c4a11e1",
+                     "visibilityType": "always",
+                     "clickEvents": [
+                         {
+-                            "type": "key",
+-                            "key": "GLFW_KEY_F5"
++                            "type": "launcher_event",
++                            "key": "launcher.event.switch_menu"
+                         }
+                     ],
+                     "isSwipple": false,
+@@ -213,29 +198,29 @@
+                 },
+                 {
+                     "text": {
+-                        "default": "Tab",
++                        "default": "•••",
+                         "matchQueue": []
+                     },
+-                    "uuid": "fd8053d877dd412fbe",
++                    "uuid": "bd0000b3d70c000006",
+                     "position": {
+-                        "x": 0,
+-                        "y": 1239
++                        "x": 6880,
++                        "y": 10000
+                     },
+                     "buttonSize": {
+                         "type": "percentage",
+                         "widthDp": 50.0,
+                         "heightDp": 50.0,
+-                        "widthPercentage": 2289,
+-                        "heightPercentage": 1100,
++                        "widthPercentage": 1150,
++                        "heightPercentage": 1150,
+                         "widthReference": "screen_height",
+                         "heightReference": "screen_height"
+                     },
+-                    "buttonStyle": "a5824dc0029d",
++                    "buttonStyle": "b3d70c4a11e1",
+                     "visibilityType": "always",
+                     "clickEvents": [
+                         {
+                             "type": "key",
+-                            "key": "GLFW_KEY_TAB"
++                            "key": "GLFW_KEY_E"
+                         }
+                     ],
+                     "isSwipple": false,
+@@ -244,108 +229,145 @@
+                 },
+                 {
+                     "text": {
+-                        "default": "T",
++                        "default": "▲",
+                         "matchQueue": []
+                     },
+-                    "uuid": "eb95c5df997842539a",
++                    "uuid": "bd0000b3d70c000007",
+                     "position": {
+-                        "x": 1154,
+-                        "y": 1239
++                        "x": 9550,
++                        "y": 8900
+                     },
+                     "buttonSize": {
+                         "type": "percentage",
+                         "widthDp": 50.0,
+                         "heightDp": 50.0,
+-                        "widthPercentage": 2289,
+-                        "heightPercentage": 1100,
++                        "widthPercentage": 2100,
++                        "heightPercentage": 2100,
+                         "widthReference": "screen_height",
+                         "heightReference": "screen_height"
+                     },
+-                    "buttonStyle": "d1096cf91caa",
++                    "buttonStyle": "b3d70c4a11e2",
+                     "visibilityType": "always",
+                     "clickEvents": [
+                         {
+                             "type": "key",
+-                            "key": "GLFW_KEY_T"
++                            "key": "GLFW_KEY_SPACE"
+                         }
+                     ],
+-                    "isSwipple": false,
++                    "isSwipple": true,
+                     "isPenetrable": false,
+                     "isToggleable": false
+                 },
+                 {
+                     "text": {
+-                        "default": "IME",
++                        "default": "Sneak",
+                         "matchQueue": [
+                             {
+-                                "language_tag": "zh",
+-                                "value": "輸入法"
+-                            },
+-                            {
+-                                "language_tag": "zh-CN",
+-                                "value": "输入法"
++                                "language_tag": "es",
++                                "value": "Agachar"
+                             }
+                         ]
+                     },
+-                    "uuid": "bd02bca5cd894f0da5",
++                    "uuid": "bd0000b3d70c000008",
+                     "position": {
+-                        "x": 2308,
+-                        "y": 1239
++                        "x": 9900,
++                        "y": 5900
+                     },
+                     "buttonSize": {
+                         "type": "percentage",
+                         "widthDp": 50.0,
+                         "heightDp": 50.0,
+-                        "widthPercentage": 2289,
+-                        "heightPercentage": 1100,
++                        "widthPercentage": 1800,
++                        "heightPercentage": 1500,
+                         "widthReference": "screen_height",
+                         "heightReference": "screen_height"
+                     },
+-                    "buttonStyle": "0fa337d97f90",
++                    "buttonStyle": "b3d70c4a11e2",
+                     "visibilityType": "always",
+                     "clickEvents": [
+                         {
+-                            "type": "launcher_event",
+-                            "key": "launcher.event.switch_ime"
++                            "type": "key",
++                            "key": "GLFW_KEY_LEFT_SHIFT"
+                         }
+                     ],
+                     "isSwipple": false,
+                     "isPenetrable": false,
+-                    "isToggleable": false
++                    "isToggleable": true
+                 }
+             ]
+         },
+         {
+-            "name": "control",
+-            "uuid": "9cad88ccdb1c",
+-            "hide": false,
++            "name": "bedrock_extras",
++            "uuid": "b3d70c4a2002",
++            "hide": true,
+             "visibilityType": "in_game",
+             "normalButtons": [
+                 {
+                     "text": {
+-                        "default": "Ctrl",
+-                        "matchQueue": []
++                        "default": "Drop",
++                        "matchQueue": [
++                            {
++                                "language_tag": "es",
++                                "value": "Soltar"
++                            }
++                        ]
+                     },
+-                    "uuid": "7cbfd1caa467471fb4",
++                    "uuid": "bd0000b3d70c000009",
+                     "position": {
+-                        "x": 846,
+-                        "y": 3105
++                        "x": 8900,
++                        "y": 1650
+                     },
+                     "buttonSize": {
+                         "type": "percentage",
+                         "widthDp": 50.0,
+                         "heightDp": 50.0,
+-                        "widthPercentage": 2621,
+-                        "heightPercentage": 1100,
++                        "widthPercentage": 1700,
++                        "heightPercentage": 1200,
+                         "widthReference": "screen_height",
+                         "heightReference": "screen_height"
+                     },
+-                    "buttonStyle": "ea3ab7bc621f",
++                    "buttonStyle": "b3d70c4a11e1",
+                     "visibilityType": "always",
+                     "clickEvents": [
+                         {
+                             "type": "key",
+-                            "key": "GLFW_KEY_LEFT_CONTROL"
++                            "key": "GLFW_KEY_Q"
++                        }
++                    ],
++                    "isSwipple": false,
++                    "isPenetrable": false,
++                    "isToggleable": false
++                },
++                {
++                    "text": {
++                        "default": "Players",
++                        "matchQueue": [
++                            {
++                                "language_tag": "es",
++                                "value": "Jugadores"
++                            }
++                        ]
++                    },
++                    "uuid": "bd0000b3d70c00000a",
++                    "position": {
++                        "x": 8900,
++                        "y": 3000
++                    },
++                    "buttonSize": {
++                        "type": "percentage",
++                        "widthDp": 50.0,
++                        "heightDp": 50.0,
++                        "widthPercentage": 1700,
++                        "heightPercentage": 1200,
++                        "widthReference": "screen_height",
++                        "heightReference": "screen_height"
++                    },
++                    "buttonStyle": "b3d70c4a11e1",
++                    "visibilityType": "always",
++                    "clickEvents": [
++                        {
++                            "type": "key",
++                            "key": "GLFW_KEY_TAB"
+                         }
+                     ],
+                     "isSwipple": false,
+@@ -354,179 +376,193 @@
+                 },
+                 {
+                     "text": {
+-                        "default": "Alt",
++                        "default": "HUD",
+                         "matchQueue": []
+                     },
+-                    "uuid": "2aee05995e024ae4a5",
++                    "uuid": "bd0000b3d70c00000b",
+                     "position": {
+-                        "x": 2190,
+-                        "y": 3105
++                        "x": 7700,
++                        "y": 1650
+                     },
+                     "buttonSize": {
+                         "type": "percentage",
+                         "widthDp": 50.0,
+                         "heightDp": 50.0,
+-                        "widthPercentage": 2621,
+-                        "heightPercentage": 1100,
++                        "widthPercentage": 1300,
++                        "heightPercentage": 1200,
+                         "widthReference": "screen_height",
+                         "heightReference": "screen_height"
+                     },
+-                    "buttonStyle": "d8cd25b80d5d",
++                    "buttonStyle": "b3d70c4a11e1",
+                     "visibilityType": "always",
+                     "clickEvents": [
+                         {
+                             "type": "key",
+-                            "key": "GLFW_KEY_LEFT_ALT"
++                            "key": "GLFW_KEY_F1"
+                         }
+                     ],
+                     "isSwipple": false,
+                     "isPenetrable": false,
+                     "isToggleable": false
+-                }
+-            ]
+-        },
+-        {
+-            "name": "layer2",
+-            "uuid": "81548d8b5adb",
+-            "hide": false,
+-            "visibilityType": "always",
+-            "normalButtons": [
++                },
+                 {
+                     "text": {
+-                        "default": "PRI",
+-                        "matchQueue": [
+-                            {
+-                                "language_tag": "zh",
+-                                "value": "左鍵"
+-                            },
+-                            {
+-                                "language_tag": "zh-CN",
+-                                "value": "左键"
+-                            }
+-                        ]
++                        "default": "F3",
++                        "matchQueue": []
+                     },
+-                    "uuid": "90dd63546ff14a92be",
++                    "uuid": "bd0000b3d70c00000c",
+                     "position": {
+-                        "x": 7614,
+-                        "y": 5480
++                        "x": 7700,
++                        "y": 3000
+                     },
+                     "buttonSize": {
+                         "type": "percentage",
+                         "widthDp": 50.0,
+                         "heightDp": 50.0,
+-                        "widthPercentage": 2150,
+-                        "heightPercentage": 1380,
++                        "widthPercentage": 1300,
++                        "heightPercentage": 1200,
+                         "widthReference": "screen_height",
+                         "heightReference": "screen_height"
+                     },
+-                    "buttonStyle": "43f4fb63f80a",
++                    "buttonStyle": "b3d70c4a11e1",
+                     "visibilityType": "always",
+                     "clickEvents": [
+                         {
+-                            "type": "launcher_event",
+-                            "key": "GLFW_MOUSE_BUTTON_LEFT"
++                            "type": "key",
++                            "key": "GLFW_KEY_F3"
+                         }
+                     ],
+                     "isSwipple": false,
+-                    "isPenetrable": true,
++                    "isPenetrable": false,
+                     "isToggleable": false
+                 },
+                 {
+                     "text": {
+-                        "default": "SEC",
++                        "default": "Keyboard",
+                         "matchQueue": [
+                             {
+-                                "language_tag": "zh",
+-                                "value": "右鍵"
+-                            },
+-                            {
+-                                "language_tag": "zh-CN",
+-                                "value": "右键"
++                                "language_tag": "es",
++                                "value": "Teclado"
+                             }
+                         ]
+                     },
+-                    "uuid": "96e156843d754adda4",
++                    "uuid": "bd0000b3d70c00000d",
+                     "position": {
+-                        "x": 8690,
+-                        "y": 5480
++                        "x": 7700,
++                        "y": 4350
+                     },
+                     "buttonSize": {
+                         "type": "percentage",
+                         "widthDp": 50.0,
+                         "heightDp": 50.0,
+-                        "widthPercentage": 2150,
+-                        "heightPercentage": 1380,
++                        "widthPercentage": 3000,
++                        "heightPercentage": 1200,
+                         "widthReference": "screen_height",
+                         "heightReference": "screen_height"
+                     },
+-                    "buttonStyle": "21b054786830",
++                    "buttonStyle": "b3d70c4a11e1",
+                     "visibilityType": "always",
+                     "clickEvents": [
+                         {
+                             "type": "launcher_event",
+-                            "key": "GLFW_MOUSE_BUTTON_RIGHT"
++                            "key": "launcher.event.switch_ime"
+                         }
+                     ],
+                     "isSwipple": false,
+-                    "isPenetrable": true,
++                    "isPenetrable": false,
+                     "isToggleable": false
+-                },
++                }
++            ]
++        },
++        {
++            "name": "bedrock_move",
++            "uuid": "b3d70c4a2003",
++            "hide": false,
++            "visibilityType": "in_game",
++            "joystickButtons": [
++                {
++                    "uuid": "bd0000b3d70c00000e",
++                    "position": {
++                        "x": 700,
++                        "y": 8600
++                    },
++                    "sizePercentage": 3800,
++                    "lockEvents": [
++                        {
++                            "type": "key",
++                            "key": "GLFW_KEY_LEFT_CONTROL"
++                        }
++                    ]
++                }
++            ]
++        },
++        {
++            "name": "bedrock_menus",
++            "uuid": "b3d70c4a2004",
++            "hide": false,
++            "visibilityType": "in_menu",
++            "normalButtons": [
+                 {
+                     "text": {
+-                        "default": "□",
++                        "default": "≡",
+                         "matchQueue": []
+                     },
+-                    "uuid": "53bea7b9f6974f6b9a",
++                    "uuid": "bd0000b3d70c00000f",
+                     "position": {
+-                        "x": 7614,
+-                        "y": 7080
++                        "x": 10000,
++                        "y": 0
+                     },
+                     "buttonSize": {
+                         "type": "percentage",
+                         "widthDp": 50.0,
+                         "heightDp": 50.0,
+-                        "widthPercentage": 2150,
+-                        "heightPercentage": 1380,
++                        "widthPercentage": 1300,
++                        "heightPercentage": 1300,
+                         "widthReference": "screen_height",
+                         "heightReference": "screen_height"
+                     },
+-                    "buttonStyle": "a5824dc0029d",
++                    "buttonStyle": "b3d70c4a11e1",
+                     "visibilityType": "always",
+                     "clickEvents": [
+                         {
+-                            "type": "key",
+-                            "key": "GLFW_KEY_LEFT_SHIFT"
++                            "type": "launcher_event",
++                            "key": "launcher.event.switch_menu"
+                         }
+                     ],
+                     "isSwipple": false,
+                     "isPenetrable": false,
+-                    "isToggleable": true
++                    "isToggleable": false
+                 },
+                 {
+                     "text": {
+-                        "default": "■",
+-                        "matchQueue": []
++                        "default": "Keyboard",
++                        "matchQueue": [
++                            {
++                                "language_tag": "es",
++                                "value": "Teclado"
++                            }
++                        ]
+                     },
+-                    "uuid": "ece30bbe48204713ae",
++                    "uuid": "bd0000b3d70c000010",
+                     "position": {
+-                        "x": 8690,
+-                        "y": 7080
++                        "x": 10000,
++                        "y": 1500
+                     },
+                     "buttonSize": {
+                         "type": "percentage",
+                         "widthDp": 50.0,
+                         "heightDp": 50.0,
+-                        "widthPercentage": 2150,
+-                        "heightPercentage": 1380,
++                        "widthPercentage": 2600,
++                        "heightPercentage": 1200,
+                         "widthReference": "screen_height",
+                         "heightReference": "screen_height"
+                     },
+-                    "buttonStyle": "0fa337d97f90",
++                    "buttonStyle": "b3d70c4a11e1",
+                     "visibilityType": "always",
+                     "clickEvents": [
+                         {
+-                            "type": "key",
+-                            "key": "GLFW_KEY_SPACE"
++                            "type": "launcher_event",
++                            "key": "launcher.event.switch_ime"
+                         }
+                     ],
+                     "isSwipple": false,
+@@ -534,460 +570,114 @@
+                     "isToggleable": false
+                 }
+             ]
+-        },
+-        {
+-            "name": "move",
+-            "uuid": "befebb63d5bf",
+-            "hide": false,
+-            "visibilityType": "in_game",
+-            "joystickButtons": [
+-                {
+-                    "uuid": "b581292c47294e099d",
+-                    "position": {
+-                        "x": 1121,
+-                        "y": 7953
+-                    },
+-                    "sizePercentage": 3417,
+-                    "lockEvents": [
+-                        {
+-                            "type": "key",
+-                            "key": "GLFW_KEY_LEFT_CONTROL"
+-                        }
+-                    ]
+-                }
+-            ]
+         }
+     ],
+     "styles": [
+         {
+-            "name": "topend",
+-            "uuid": "21b054786830",
+-            "animateSwap": false,
+-            "commonStyle": false,
+-            "lightStyle": {
+-                "alpha": 1.0,
+-                "pressedAlpha": 1.0,
+-                "backgroundColor": 2147483648,
+-                "pressedBackgroundColor": 3012069512,
+-                "contentColor": 4294967295,
+-                "pressedContentColor": 4294967295,
+-                "borderWidth": 0,
+-                "pressedBorderWidth": 0,
+-                "borderColor": 4294967295,
+-                "pressedBorderColor": 4294967295,
+-                "borderRadius": {
+-                    "topStart": 0.0,
+-                    "topEnd": 40.0,
+-                    "bottomEnd": 0.0,
+-                    "bottomStart": 0.0
+-                },
+-                "pressedBorderRadius": {
+-                    "topStart": 0.0,
+-                    "topEnd": 40.0,
+-                    "bottomEnd": 0.0,
+-                    "bottomStart": 0.0
+-                }
+-            },
+-            "darkStyle": {
+-                "alpha": 1.0,
+-                "pressedAlpha": 1.0,
+-                "backgroundColor": 2147483648,
+-                "pressedBackgroundColor": 3012069512,
+-                "contentColor": 4294967295,
+-                "pressedContentColor": 4294967295,
+-                "borderWidth": 0,
+-                "pressedBorderWidth": 0,
+-                "borderColor": 4294967295,
+-                "pressedBorderColor": 4294967295,
+-                "borderRadius": {
+-                    "topStart": 0.0,
+-                    "topEnd": 40.0,
+-                    "bottomEnd": 0.0,
+-                    "bottomStart": 0.0
+-                },
+-                "pressedBorderRadius": {
+-                    "topStart": 0.0,
+-                    "topEnd": 40.0,
+-                    "bottomEnd": 0.0,
+-                    "bottomStart": 0.0
+-                }
+-            }
+-        },
+-        {
+-            "name": "topstart",
+-            "uuid": "43f4fb63f80a",
+-            "animateSwap": false,
+-            "commonStyle": false,
+-            "lightStyle": {
+-                "alpha": 1.0,
+-                "pressedAlpha": 1.0,
+-                "backgroundColor": 2147483648,
+-                "pressedBackgroundColor": 3012069512,
+-                "contentColor": 4294967295,
+-                "pressedContentColor": 4294967295,
+-                "borderWidth": 0,
+-                "pressedBorderWidth": 0,
+-                "borderColor": 4294967295,
+-                "pressedBorderColor": 4294967295,
+-                "borderRadius": {
+-                    "topStart": 40.0,
+-                    "topEnd": 0.0,
+-                    "bottomEnd": 0.0,
+-                    "bottomStart": 0.0
+-                },
+-                "pressedBorderRadius": {
+-                    "topStart": 40.0,
+-                    "topEnd": 0.0,
+-                    "bottomEnd": 0.0,
+-                    "bottomStart": 0.0
+-                }
+-            },
+-            "darkStyle": {
+-                "alpha": 1.0,
+-                "pressedAlpha": 1.0,
+-                "backgroundColor": 2147483648,
+-                "pressedBackgroundColor": 3012069512,
+-                "contentColor": 4294967295,
+-                "pressedContentColor": 4294967295,
+-                "borderWidth": 0,
+-                "pressedBorderWidth": 0,
+-                "borderColor": 4294967295,
+-                "pressedBorderColor": 4294967295,
+-                "borderRadius": {
+-                    "topStart": 40.0,
+-                    "topEnd": 0.0,
+-                    "bottomEnd": 0.0,
+-                    "bottomStart": 0.0
+-                },
+-                "pressedBorderRadius": {
+-                    "topStart": 40.0,
+-                    "topEnd": 0.0,
+-                    "bottomEnd": 0.0,
+-                    "bottomStart": 0.0
+-                }
+-            }
+-        },
+-        {
+-            "name": "bottomend",
+-            "uuid": "0fa337d97f90",
+-            "animateSwap": false,
+-            "commonStyle": false,
+-            "lightStyle": {
+-                "alpha": 1.0,
+-                "pressedAlpha": 1.0,
+-                "backgroundColor": 2147483648,
+-                "pressedBackgroundColor": 3012069512,
+-                "contentColor": 4294967295,
+-                "pressedContentColor": 4294967295,
+-                "borderWidth": 0,
+-                "pressedBorderWidth": 0,
+-                "borderColor": 4294967295,
+-                "pressedBorderColor": 4294967295,
+-                "borderRadius": {
+-                    "topStart": 0.0,
+-                    "topEnd": 0.0,
+-                    "bottomEnd": 40.0,
+-                    "bottomStart": 0.0
+-                },
+-                "pressedBorderRadius": {
+-                    "topStart": 0.0,
+-                    "topEnd": 0.0,
+-                    "bottomEnd": 40.0,
+-                    "bottomStart": 0.0
+-                }
+-            },
+-            "darkStyle": {
+-                "alpha": 1.0,
+-                "pressedAlpha": 1.0,
+-                "backgroundColor": 2147483648,
+-                "pressedBackgroundColor": 3012069512,
+-                "contentColor": 4294967295,
+-                "pressedContentColor": 4294967295,
+-                "borderWidth": 0,
+-                "pressedBorderWidth": 0,
+-                "borderColor": 4294967295,
+-                "pressedBorderColor": 4294967295,
+-                "borderRadius": {
+-                    "topStart": 0.0,
+-                    "topEnd": 0.0,
+-                    "bottomEnd": 40.0,
+-                    "bottomStart": 0.0
+-                },
+-                "pressedBorderRadius": {
+-                    "topStart": 0.0,
+-                    "topEnd": 0.0,
+-                    "bottomEnd": 40.0,
+-                    "bottomStart": 0.0
+-                }
+-            }
+-        },
+-        {
+-            "name": "bottomstart",
+-            "uuid": "a5824dc0029d",
+-            "animateSwap": false,
+-            "commonStyle": false,
+-            "lightStyle": {
+-                "alpha": 1.0,
+-                "pressedAlpha": 1.0,
+-                "backgroundColor": 2147483648,
+-                "pressedBackgroundColor": 3012069512,
+-                "contentColor": 4294967295,
+-                "pressedContentColor": 4294967295,
+-                "borderWidth": 0,
+-                "pressedBorderWidth": 0,
+-                "borderColor": 4294967295,
+-                "pressedBorderColor": 4294967295,
+-                "borderRadius": {
+-                    "topStart": 0.0,
+-                    "topEnd": 0.0,
+-                    "bottomEnd": 0.0,
+-                    "bottomStart": 40.0
+-                },
+-                "pressedBorderRadius": {
+-                    "topStart": 0.0,
+-                    "topEnd": 0.0,
+-                    "bottomEnd": 0.0,
+-                    "bottomStart": 40.0
+-                }
+-            },
+-            "darkStyle": {
+-                "alpha": 1.0,
+-                "pressedAlpha": 1.0,
+-                "backgroundColor": 2147483648,
+-                "pressedBackgroundColor": 3012069512,
+-                "contentColor": 4294967295,
+-                "pressedContentColor": 4294967295,
+-                "borderWidth": 0,
+-                "pressedBorderWidth": 0,
+-                "borderColor": 4294967295,
+-                "pressedBorderColor": 4294967295,
+-                "borderRadius": {
+-                    "topStart": 0.0,
+-                    "topEnd": 0.0,
+-                    "bottomEnd": 0.0,
+-                    "bottomStart": 40.0
+-                },
+-                "pressedBorderRadius": {
+-                    "topStart": 0.0,
+-                    "topEnd": 0.0,
+-                    "bottomEnd": 0.0,
+-                    "bottomStart": 40.0
+-                }
+-            }
+-        },
+-        {
+-            "name": "end",
+-            "uuid": "d8cd25b80d5d",
+-            "animateSwap": false,
+-            "commonStyle": false,
+-            "lightStyle": {
+-                "alpha": 1.0,
+-                "pressedAlpha": 1.0,
+-                "backgroundColor": 2147483648,
+-                "pressedBackgroundColor": 3012069512,
+-                "contentColor": 4294967295,
+-                "pressedContentColor": 4294967295,
+-                "borderWidth": 0,
+-                "pressedBorderWidth": 0,
+-                "borderColor": 4294967295,
+-                "pressedBorderColor": 4294967295,
+-                "borderRadius": {
+-                    "topStart": 0.0,
+-                    "topEnd": 40.0,
+-                    "bottomEnd": 40.0,
+-                    "bottomStart": 0.0
+-                },
+-                "pressedBorderRadius": {
+-                    "topStart": 0.0,
+-                    "topEnd": 40.0,
+-                    "bottomEnd": 40.0,
+-                    "bottomStart": 0.0
+-                }
+-            },
+-            "darkStyle": {
+-                "alpha": 1.0,
+-                "pressedAlpha": 1.0,
+-                "backgroundColor": 2147483648,
+-                "pressedBackgroundColor": 3012069512,
+-                "contentColor": 4294967295,
+-                "pressedContentColor": 4294967295,
+-                "borderWidth": 0,
+-                "pressedBorderWidth": 0,
+-                "borderColor": 4294967295,
+-                "pressedBorderColor": 4294967295,
+-                "borderRadius": {
+-                    "topStart": 0.0,
+-                    "topEnd": 40.0,
+-                    "bottomEnd": 40.0,
+-                    "bottomStart": 0.0
+-                },
+-                "pressedBorderRadius": {
+-                    "topStart": 0.0,
+-                    "topEnd": 40.0,
+-                    "bottomEnd": 40.0,
+-                    "bottomStart": 0.0
+-                }
+-            }
+-        },
+-        {
+-            "name": "start",
+-            "uuid": "ea3ab7bc621f",
+-            "animateSwap": false,
+-            "commonStyle": false,
+-            "lightStyle": {
+-                "alpha": 1.0,
+-                "pressedAlpha": 1.0,
+-                "backgroundColor": 2147483648,
+-                "pressedBackgroundColor": 3012069512,
+-                "contentColor": 4294967295,
+-                "pressedContentColor": 4294967295,
+-                "borderWidth": 0,
+-                "pressedBorderWidth": 0,
+-                "borderColor": 4294967295,
+-                "pressedBorderColor": 4294967295,
+-                "borderRadius": {
+-                    "topStart": 40.0,
+-                    "topEnd": 0.0,
+-                    "bottomEnd": 0.0,
+-                    "bottomStart": 40.0
+-                },
+-                "pressedBorderRadius": {
+-                    "topStart": 40.0,
+-                    "topEnd": 0.0,
+-                    "bottomEnd": 0.0,
+-                    "bottomStart": 40.0
+-                }
+-            },
+-            "darkStyle": {
+-                "alpha": 1.0,
+-                "pressedAlpha": 1.0,
+-                "backgroundColor": 2147483648,
+-                "pressedBackgroundColor": 3012069512,
+-                "contentColor": 4294967295,
+-                "pressedContentColor": 4294967295,
+-                "borderWidth": 0,
+-                "pressedBorderWidth": 0,
+-                "borderColor": 4294967295,
+-                "pressedBorderColor": 4294967295,
+-                "borderRadius": {
+-                    "topStart": 40.0,
+-                    "topEnd": 0.0,
+-                    "bottomEnd": 0.0,
+-                    "bottomStart": 40.0
+-                },
+-                "pressedBorderRadius": {
+-                    "topStart": 40.0,
+-                    "topEnd": 0.0,
+-                    "bottomEnd": 0.0,
+-                    "bottomStart": 40.0
+-                }
+-            }
+-        },
+-        {
+-            "name": "rounded",
+-            "uuid": "cac8c754ffa0",
++            "name": "bedrock",
++            "uuid": "b3d70c4a11e1",
+             "animateSwap": false,
+-            "commonStyle": false,
++            "commonStyle": true,
+             "lightStyle": {
+                 "alpha": 1.0,
+                 "pressedAlpha": 1.0,
+-                "backgroundColor": 2147483648,
+-                "pressedBackgroundColor": 3012069512,
++                "backgroundColor": 1929379840,
++                "pressedBackgroundColor": 3437684971,
+                 "contentColor": 4294967295,
+-                "pressedContentColor": 4294967295,
+-                "borderWidth": 0,
+-                "pressedBorderWidth": 0,
+-                "borderColor": 4294967295,
++                "pressedContentColor": 4280163871,
++                "borderWidth": 2,
++                "pressedBorderWidth": 2,
++                "borderColor": 2164260863,
+                 "pressedBorderColor": 4294967295,
+                 "borderRadius": {
+-                    "topStart": 40.0,
+-                    "topEnd": 40.0,
+-                    "bottomEnd": 40.0,
+-                    "bottomStart": 40.0
++                    "topStart": 8.0,
++                    "topEnd": 8.0,
++                    "bottomEnd": 8.0,
++                    "bottomStart": 8.0
+                 },
+                 "pressedBorderRadius": {
+-                    "topStart": 40.0,
+-                    "topEnd": 40.0,
+-                    "bottomEnd": 40.0,
+-                    "bottomStart": 40.0
++                    "topStart": 8.0,
++                    "topEnd": 8.0,
++                    "bottomEnd": 8.0,
++                    "bottomStart": 8.0
+                 }
+             },
+             "darkStyle": {
+                 "alpha": 1.0,
+                 "pressedAlpha": 1.0,
+-                "backgroundColor": 2147483648,
+-                "pressedBackgroundColor": 3012069512,
++                "backgroundColor": 1929379840,
++                "pressedBackgroundColor": 3437684971,
+                 "contentColor": 4294967295,
+-                "pressedContentColor": 4294967295,
+-                "borderWidth": 0,
+-                "pressedBorderWidth": 0,
+-                "borderColor": 4294967295,
++                "pressedContentColor": 4280163871,
++                "borderWidth": 2,
++                "pressedBorderWidth": 2,
++                "borderColor": 2164260863,
+                 "pressedBorderColor": 4294967295,
+                 "borderRadius": {
+-                    "topStart": 40.0,
+-                    "topEnd": 40.0,
+-                    "bottomEnd": 40.0,
+-                    "bottomStart": 40.0
++                    "topStart": 8.0,
++                    "topEnd": 8.0,
++                    "bottomEnd": 8.0,
++                    "bottomStart": 8.0
+                 },
+                 "pressedBorderRadius": {
+-                    "topStart": 40.0,
+-                    "topEnd": 40.0,
+-                    "bottomEnd": 40.0,
+-                    "bottomStart": 40.0
++                    "topStart": 8.0,
++                    "topEnd": 8.0,
++                    "bottomEnd": 8.0,
++                    "bottomStart": 8.0
+                 }
+             }
+         },
+         {
+-            "name": "default",
+-            "uuid": "d1096cf91caa",
++            "name": "bedrock_round",
++            "uuid": "b3d70c4a11e2",
+             "animateSwap": false,
+-            "commonStyle": false,
++            "commonStyle": true,
+             "lightStyle": {
+                 "alpha": 1.0,
+                 "pressedAlpha": 1.0,
+-                "backgroundColor": 2147483648,
+-                "pressedBackgroundColor": 3012069512,
++                "backgroundColor": 1929379840,
++                "pressedBackgroundColor": 3437684971,
+                 "contentColor": 4294967295,
+-                "pressedContentColor": 4294967295,
+-                "borderWidth": 0,
+-                "pressedBorderWidth": 0,
+-                "borderColor": 4294967295,
++                "pressedContentColor": 4280163871,
++                "borderWidth": 2,
++                "pressedBorderWidth": 2,
++                "borderColor": 2164260863,
+                 "pressedBorderColor": 4294967295,
+                 "borderRadius": {
+-                    "topStart": 0.0,
+-                    "topEnd": 0.0,
+-                    "bottomEnd": 0.0,
+-                    "bottomStart": 0.0
++                    "topStart": 50.0,
++                    "topEnd": 50.0,
++                    "bottomEnd": 50.0,
++                    "bottomStart": 50.0
+                 },
+                 "pressedBorderRadius": {
+-                    "topStart": 0.0,
+-                    "topEnd": 0.0,
+-                    "bottomEnd": 0.0,
+-                    "bottomStart": 0.0
++                    "topStart": 50.0,
++                    "topEnd": 50.0,
++                    "bottomEnd": 50.0,
++                    "bottomStart": 50.0
+                 }
+             },
+             "darkStyle": {
+                 "alpha": 1.0,
+                 "pressedAlpha": 1.0,
+-                "backgroundColor": 2147483648,
+-                "pressedBackgroundColor": 3012069512,
++                "backgroundColor": 1929379840,
++                "pressedBackgroundColor": 3437684971,
+                 "contentColor": 4294967295,
+-                "pressedContentColor": 4294967295,
+-                "borderWidth": 0,
+-                "pressedBorderWidth": 0,
+-                "borderColor": 4294967295,
++                "pressedContentColor": 4280163871,
++                "borderWidth": 2,
++                "pressedBorderWidth": 2,
++                "borderColor": 2164260863,
+                 "pressedBorderColor": 4294967295,
+                 "borderRadius": {
+-                    "topStart": 0.0,
+-                    "topEnd": 0.0,
+-                    "bottomEnd": 0.0,
+-                    "bottomStart": 0.0
++                    "topStart": 50.0,
++                    "topEnd": 50.0,
++                    "bottomEnd": 50.0,
++                    "bottomStart": 50.0
+                 },
+                 "pressedBorderRadius": {
+-                    "topStart": 0.0,
+-                    "topEnd": 0.0,
+-                    "bottomEnd": 0.0,
+-                    "bottomStart": 0.0
++                    "topStart": 50.0,
++                    "topEnd": 50.0,
++                    "bottomEnd": 50.0,
++                    "bottomStart": 50.0
+                 }
+             }
+         }
+diff --git a/ZalithLauncher/src/main/assets/legal/OFL-PixelifySans.txt b/ZalithLauncher/src/main/assets/legal/OFL-PixelifySans.txt
+new file mode 100644
+index 0000000..cc97f45
+--- /dev/null
++++ b/ZalithLauncher/src/main/assets/legal/OFL-PixelifySans.txt
+@@ -0,0 +1,93 @@
++Copyright 2021 The Pixelify Sans Project Authors (https://github.com/eifetx/Pixelify-Sans)
++
++This Font Software is licensed under the SIL Open Font License, Version 1.1.
++This license is copied below, and is also available with a FAQ at:
++http://scripts.sil.org/OFL
++
++
++-----------------------------------------------------------
++SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
++-----------------------------------------------------------
++
++PREAMBLE
++The goals of the Open Font License (OFL) are to stimulate worldwide
++development of collaborative font projects, to support the font creation
++efforts of academic and linguistic communities, and to provide a free and
++open framework in which fonts may be shared and improved in partnership
++with others.
++
++The OFL allows the licensed fonts to be used, studied, modified and
++redistributed freely as long as they are not sold by themselves. The
++fonts, including any derivative works, can be bundled, embedded,
++redistributed and/or sold with any software provided that any reserved
++names are not used by derivative works. The fonts and derivatives,
++however, cannot be released under any other type of license. The
++requirement for fonts to remain under this license does not apply
++to any document created using the fonts or their derivatives.
++
++DEFINITIONS
++"Font Software" refers to the set of files released by the Copyright
++Holder(s) under this license and clearly marked as such. This may
++include source files, build scripts and documentation.
++
++"Reserved Font Name" refers to any names specified as such after the
++copyright statement(s).
++
++"Original Version" refers to the collection of Font Software components as
++distributed by the Copyright Holder(s).
++
++"Modified Version" refers to any derivative made by adding to, deleting,
++or substituting -- in part or in whole -- any of the components of the
++Original Version, by changing formats or by porting the Font Software to a
++new environment.
++
++"Author" refers to any designer, engineer, programmer, technical
++writer or other person who contributed to the Font Software.
++
++PERMISSION & CONDITIONS
++Permission is hereby granted, free of charge, to any person obtaining
++a copy of the Font Software, to use, study, copy, merge, embed, modify,
++redistribute, and sell modified and unmodified copies of the Font
++Software, subject to the following conditions:
++
++1) Neither the Font Software nor any of its individual components,
++in Original or Modified Versions, may be sold by itself.
++
++2) Original or Modified Versions of the Font Software may be bundled,
++redistributed and/or sold with any software, provided that each copy
++contains the above copyright notice and this license. These can be
++included either as stand-alone text files, human-readable headers or
++in the appropriate machine-readable metadata fields within text or
++binary files as long as those fields can be easily viewed by the user.
++
++3) No Modified Version of the Font Software may use the Reserved Font
++Name(s) unless explicit written permission is granted by the corresponding
++Copyright Holder. This restriction only applies to the primary font name as
++presented to the users.
++
++4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font
++Software shall not be used to promote, endorse or advertise any
++Modified Version, except to acknowledge the contribution(s) of the
++Copyright Holder(s) and the Author(s) or with their explicit written
++permission.
++
++5) The Font Software, modified or unmodified, in part or in whole,
++must be distributed entirely under this license, and must not be
++distributed under any other license. The requirement for fonts to
++remain under this license does not apply to any document created
++using the Font Software.
++
++TERMINATION
++This license becomes null and void if any of the above conditions are
++not met.
++
++DISCLAIMER
++THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
++EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
++MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
++OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
++COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
++INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
++DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
++OTHER DEALINGS IN THE FONT SOFTWARE.
+diff --git a/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/game/download/addon/BedravaBoostPack.kt b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/game/download/addon/BedravaBoostPack.kt
+new file mode 100644
+index 0000000..3b07267
+--- /dev/null
++++ b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/game/download/addon/BedravaBoostPack.kt
+@@ -0,0 +1,144 @@
++/*
++ * Bedrava (based on Zalith Launcher 2)
++ * Copyright (C) 2025-2026 MovTery <movtery228@qq.com> and contributors
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
++ * See the GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/gpl-3.0.txt>.
++ */
++
++package com.movtery.zalithlauncher.game.download.addon
++
++import com.movtery.zalithlauncher.game.addons.modloader.ModLoader
++import com.movtery.zalithlauncher.game.download.addon.platform.Platform
++import com.movtery.zalithlauncher.game.download.addon.platform.PlatformDependencyType
++import com.movtery.zalithlauncher.game.download.addon.platform.getVersions
++import com.movtery.zalithlauncher.game.download.addon.platform.modrinth.models.ModrinthVersion
++import com.movtery.zalithlauncher.game.download.addon.platform.modrinth.models.getPrimary
++import com.movtery.zalithlauncher.game.version.installed.Version
++import com.movtery.zalithlauncher.utils.logging.Logger
++import com.movtery.zalithlauncher.utils.network.downloadFile
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.withContext
++import java.io.File
++
++private const val TAG = "BedravaBoostPack"
++
++/**
++ * "Pack de rendimiento" de Bedrava: descarga desde Modrinth (fuente oficial de cada autor)
++ * la última versión compatible de cada mod para la versión de Minecraft y el loader elegidos.
++ * No se redistribuye ningún archivo: se baja todo en el celular del jugador.
++ */
++object BedravaBoostPack {
++    /** Mods de rendimiento y de "sensación Bedrock" (slugs de Modrinth). */
++    val MODS = listOf(
++        "fabric-api",
++        "sodium",          // motor de render mucho más rápido
++        "lithium",         // optimiza la lógica del juego
++        "ferrite-core",    // menos uso de RAM
++        "modernfix",       // carga más rápida y menos RAM
++        "entityculling",   // no dibuja entidades que no se ven
++        "immediatelyfast", // HUD, texto y partículas más livianos
++        "moreculling",     // menos caras de bloques dibujadas
++        "dynamic-fps",     // baja los FPS en segundo plano: menos batería y calor
++        "iris",            // soporte de shaders
++        "bedrockify",      // detalles estilo Bedrock (poner bloques al borde, HUD, etc.)
++    )
++
++    /** Shader liviano y configurable, pensado para equipos modestos. */
++    val SHADERS = listOf("makeup-ultra-fast-shaders")
++
++    sealed interface Result {
++        data class Done(val installed: List<String>, val skipped: List<String>) : Result
++        data object NeedsFabric : Result
++        data class Failed(val message: String) : Result
++    }
++
++    suspend fun install(
++        version: Version,
++        onProgress: (String) -> Unit = {}
++    ): Result = withContext(Dispatchers.IO) {
++        val info = version.getVersionInfo() ?: return@withContext Result.Failed("version info missing")
++        val loaderName = when {
++            info.hasLoader(ModLoader.FABRIC) -> "fabric"
++            info.hasLoader(ModLoader.QUILT) -> "quilt"
++            else -> return@withContext Result.NeedsFabric
++        }
++        val mcVersion = info.minecraftVersion
++        val gameDir = version.getGameDir()
++        val modsDir = File(gameDir, "mods").apply { mkdirs() }
++        val shaderDir = File(gameDir, "shaderpacks").apply { mkdirs() }
++
++        val installed = mutableListOf<String>()
++        val skipped = mutableListOf<String>()
++        val queue = ArrayDeque(MODS)
++        val seen = mutableSetOf<String>()
++
++        while (queue.isNotEmpty()) {
++            val project = queue.removeFirst()
++            if (!seen.add(project)) continue
++            onProgress(project)
++            runCatching {
++                val match = findVersion(project, mcVersion) { loaders ->
++                    loaderName in loaders || (loaderName == "quilt" && "fabric" in loaders)
++                }
++                if (match == null) {
++                    skipped += project
++                    return@runCatching
++                }
++                if (download(match, modsDir)) installed += project
++                match.dependencies
++                    .filter { it.dependencyType == PlatformDependencyType.REQUIRED }
++                    .mapNotNull { it.projectId }
++                    .forEach { queue.addLast(it) }
++            }.onFailure {
++                Logger.warning(TAG, "Failed to install $project", it)
++                skipped += project
++            }
++        }
++
++        SHADERS.forEach { project ->
++            onProgress(project)
++            runCatching {
++                val match = findVersion(project, mcVersion) { loaders -> "iris" in loaders }
++                    ?: findVersion(project, null) { loaders -> "iris" in loaders }
++                if (match != null && download(match, shaderDir)) installed += project else skipped += project
++            }.onFailure {
++                Logger.warning(TAG, "Failed to install shader $project", it)
++                skipped += project
++            }
++        }
++
++        Result.Done(installed, skipped)
++    }
++
++    private suspend fun findVersion(
++        project: String,
++        mcVersion: String?,
++        loaderFilter: (List<String>) -> Boolean
++    ): ModrinthVersion? {
++        return getVersions(projectID = project, platform = Platform.MODRINTH)
++            .filterIsInstance<ModrinthVersion>()
++            .firstOrNull { v ->
++                (mcVersion == null || mcVersion in v.gameVersions) && loaderFilter(v.loaders.toList())
++            }
++    }
++
++    /** @return true si se descargó, false si ya estaba. */
++    private suspend fun download(version: ModrinthVersion, dir: File): Boolean {
++        val file = version.files.getPrimary() ?: return false
++        val target = File(dir, file.fileName)
++        if (target.exists()) return false
++        downloadFile(url = file.url, outputFile = target, sha1 = file.hashes.sha1)
++        return true
++    }
++}
+diff --git a/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/game/launch/MCOptions.kt b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/game/launch/MCOptions.kt
+index a0dafa3..5deb613 100644
+--- a/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/game/launch/MCOptions.kt
++++ b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/game/launch/MCOptions.kt
+@@ -23,6 +23,8 @@ import android.os.Build
+ import android.os.FileObserver
+ import com.movtery.zalithlauncher.context.copyAssetFile
+ import com.movtery.zalithlauncher.game.version.installed.Version
++import com.movtery.zalithlauncher.setting.bedravaGameOptions
++import com.movtery.zalithlauncher.setting.detectDeviceTier
+ import com.movtery.zalithlauncher.utils.logging.Logger
+ import com.movtery.zalithlauncher.utils.string.splitPreservingQuotes
+ import kotlinx.coroutines.flow.MutableStateFlow
+@@ -54,11 +56,19 @@ object MCOptions {
+ 
+             val optionsFile = getOptionsFile()
+             optionsFile.parentFile?.takeIf { !it.exists() }?.mkdirs()
+-            if (!optionsFile.exists()) {
++            val isNewOptions = !optionsFile.exists()
++            if (isNewOptions) {
+                 optionsFile.createWithDefaults(context)
+             }
+ 
+             loadInternal()
++            if (isNewOptions && optionsFile.exists()) {
++                // Bedrava: opciones gráficas iniciales según la gama del celular
++                bedravaGameOptions(detectDeviceTier(context)).forEach { (key, value) ->
++                    parameterMap[key] = value
++                }
++                writeFileAtomically(optionsFile)
++            }
+             setupFileObserver()
+         }
+     }
+diff --git a/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/setting/AllSettings.kt b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/setting/AllSettings.kt
+index 5d19cf8..2e3c636 100644
+--- a/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/setting/AllSettings.kt
++++ b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/setting/AllSettings.kt
+@@ -18,7 +18,6 @@
+ 
+ package com.movtery.zalithlauncher.setting
+ 
+-import android.os.Build
+ import androidx.compose.ui.geometry.Offset
+ import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.graphics.toArgb
+@@ -155,6 +154,11 @@ object AllSettings : SettingsRegistry() {
+      */
+     val ramAllocation = intSetting("ramAllocation", null, min = 256)
+ 
++    /**
++     * Bedrava: el preset de rendimiento según la gama del celular ya se aplicó (solo corre una vez)
++     */
++    val bedravaPresetApplied = boolSetting("bedravaPresetApplied", false)
++
+     /**
+      * 自定义Jvm启动参数
+      */
+@@ -324,7 +328,7 @@ object AllSettings : SettingsRegistry() {
+     /**
+      * 手势控制
+      */
+-    val gestureControl = boolSetting("gestureControl", false)
++    val gestureControl = boolSetting("gestureControl", true)
+ 
+     /**
+      * 手势控制点击时触发的鼠标按钮
+@@ -383,8 +387,7 @@ object AllSettings : SettingsRegistry() {
+      */
+     val launcherColorTheme = enumSetting(
+         "launcherColorTheme",
+-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) ColorThemeType.DYNAMIC
+-        else ColorThemeType.EMBERMIRE
++        ColorThemeType.BEDROCK
+     )
+ 
+     /**
+@@ -400,7 +403,7 @@ object AllSettings : SettingsRegistry() {
+     /**
+      * 启动器UI深色主题
+      */
+-    val launcherDarkMode = enumSetting("launcherDarkMode", DarkMode.FollowSystem)
++    val launcherDarkMode = enumSetting("launcherDarkMode", DarkMode.Enable)
+ 
+     /**
+      * 启动器语言
+diff --git a/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/setting/BedravaPerformance.kt b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/setting/BedravaPerformance.kt
+new file mode 100644
+index 0000000..0d3fa31
+--- /dev/null
++++ b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/setting/BedravaPerformance.kt
+@@ -0,0 +1,121 @@
++/*
++ * Bedrava (based on Zalith Launcher 2)
++ * Copyright (C) 2025-2026 MovTery <movtery228@qq.com> and contributors
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
++ * See the GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/gpl-3.0.txt>.
++ */
++
++package com.movtery.zalithlauncher.setting
++
++import android.content.Context
++import com.movtery.zalithlauncher.utils.device.Architecture
++import com.movtery.zalithlauncher.utils.platform.bytesToMB
++import com.movtery.zalithlauncher.utils.platform.getTotalMemory
++
++/**
++ * Gama del celular, estimada por RAM total y núcleos de CPU.
++ * No hace falta que sea exacta: solo elige valores iniciales razonables,
++ * que el jugador puede cambiar después en Ajustes.
++ */
++enum class DeviceTier { LOW, MID, HIGH }
++
++fun detectDeviceTier(context: Context): DeviceTier {
++    if (Architecture.is32BitsDevice) return DeviceTier.LOW
++    val ramMb = getTotalMemory(context).bytesToMB()
++    val cores = Runtime.getRuntime().availableProcessors()
++    return when {
++        ramMb < 4096 || cores < 6 -> DeviceTier.LOW
++        ramMb < 7168 -> DeviceTier.MID
++        else -> DeviceTier.HIGH
++    }
++}
++
++/**
++ * Valores de options.txt de Minecraft para un mundo nuevo, según la gama.
++ * Se aplican solo cuando la versión todavía no tiene options.txt.
++ */
++fun bedravaGameOptions(tier: DeviceTier): Map<String, String> {
++    val common = mapOf(
++        "graphicsMode" to "0",          // gráficos rápidos
++        "fancyGraphics" to "false",     // versiones viejas
++        "enableVsync" to "false",
++        "mipmapLevels" to "0",
++        "biomeBlendRadius" to "0",
++        "entityShadows" to "false",
++        "bobView" to "false",
++        "pauseOnLostFocus" to "true",
++        "touchscreen" to "false",
++        "showAutosaveIndicator" to "false",
++        "lang" to "es_ar",
++    )
++    val byTier = when (tier) {
++        DeviceTier.LOW -> mapOf(
++            "renderDistance" to "5",
++            "simulationDistance" to "5",
++            "maxFps" to "60",
++            "particles" to "2",                 // mínimas
++            "ao" to "false",
++            "renderClouds" to "\"false\"",
++            "entityDistanceScaling" to "0.5",
++            "guiScale" to "0",
++        )
++        DeviceTier.MID -> mapOf(
++            "renderDistance" to "8",
++            "simulationDistance" to "6",
++            "maxFps" to "60",
++            "particles" to "1",                 // reducidas
++            "ao" to "true",
++            "renderClouds" to "\"fast\"",
++            "entityDistanceScaling" to "0.75",
++            "guiScale" to "0",
++        )
++        DeviceTier.HIGH -> mapOf(
++            "renderDistance" to "12",
++            "simulationDistance" to "8",
++            "maxFps" to "90",
++            "particles" to "0",
++            "ao" to "true",
++            "renderClouds" to "\"fast\"",
++            "entityDistanceScaling" to "1.0",
++            "guiScale" to "0",
++        )
++    }
++    return common + byTier
++}
++
++/**
++ * Se ejecuta una sola vez (primer arranque): ajusta resolución interna, RAM,
++ * rendimiento sostenido y controles táctiles según la gama del celular.
++ */
++fun applyBedravaPresetIfNeeded(context: Context) {
++    if (AllSettings.bedravaPresetApplied.getValue()) return
++    runCatching {
++        val tier = detectDeviceTier(context)
++
++        // Resolución interna: lo que más FPS da en celular, casi sin perder nitidez.
++        AllSettings.resolutionRatio.save(
++            when (tier) {
++                DeviceTier.LOW -> 60
++                DeviceTier.MID -> 80
++                DeviceTier.HIGH -> 100
++            }
++        )
++        // En gama baja y media conviene FPS estables antes que picos que calientan el celular.
++        AllSettings.sustainedPerformance.save(tier != DeviceTier.HIGH)
++
++        AllSettings.ramAllocation.save(findBestRAMAllocation(context))
++        AllSettings.gestureControl.save(true)
++    }
++    AllSettings.bedravaPresetApplied.save(true)
++}
+diff --git a/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/setting/SettingsInitializer.kt b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/setting/SettingsInitializer.kt
+index 36817df..96b5162 100644
+--- a/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/setting/SettingsInitializer.kt
++++ b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/setting/SettingsInitializer.kt
+@@ -36,6 +36,7 @@ fun loadAllSettings(context: Context, reloadAll: Boolean = false) {
+         val ram = findBestRAMAllocation(context)
+         AllSettings.ramAllocation.save(ram)
+     }
++    applyBedravaPresetIfNeeded(context)
+     val jvmArgs = AllSettings.jvmArgs.getValue()
+     jvmArgs.splitPreservingQuotes().find { it.startsWith(LWJGL_LIB_NAME_ARG) }?.let { arg ->
+         AllSettings.jvmArgs.save(jvmArgs.replace(arg, ""))
+@@ -63,6 +64,8 @@ fun findBestRAMAllocation(context: Context): Int {
+         deviceRam < 3064 -> 936
+         deviceRam < 4096 -> 1144
+         deviceRam < 6144 -> 1536
+-        else -> 2048 //Default RAM allocation for 64 bits
++        deviceRam < 8192 -> 2048
++        deviceRam < 12288 -> 3072
++        else -> 4096 //Bedrava: mas RAM en celulares grandes para modpacks
+     }
+ }
+\ No newline at end of file
+diff --git a/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/components/BedravaBoostButton.kt b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/components/BedravaBoostButton.kt
+new file mode 100644
+index 0000000..7983108
+--- /dev/null
++++ b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/components/BedravaBoostButton.kt
+@@ -0,0 +1,86 @@
++/*
++ * Bedrava (based on Zalith Launcher 2)
++ * Copyright (C) 2025-2026 MovTery <movtery228@qq.com> and contributors
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
++ * See the GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/gpl-3.0.txt>.
++ */
++
++package com.movtery.zalithlauncher.ui.components
++
++import android.widget.Toast
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.rememberCoroutineScope
++import androidx.compose.runtime.setValue
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.platform.LocalContext
++import androidx.compose.ui.res.stringResource
++import com.movtery.zalithlauncher.R
++import com.movtery.zalithlauncher.game.download.addon.BedravaBoostPack
++import com.movtery.zalithlauncher.game.version.installed.Version
++import com.movtery.zalithlauncher.ui.theme.BedrockColors
++import com.movtery.zalithlauncher.ui.theme.components.BedrockButton
++import kotlinx.coroutines.launch
++
++/**
++ * Botón gris estilo Bedrock que instala el "Pack de rendimiento" en la versión elegida.
++ */
++@Composable
++fun BedravaBoostButton(
++    version: Version?,
++    modifier: Modifier = Modifier
++) {
++    val context = LocalContext.current
++    val scope = rememberCoroutineScope()
++    var running by remember { mutableStateOf(false) }
++    var current by remember { mutableStateOf<String?>(null) }
++
++    val label = if (running) {
++        stringResource(R.string.bedrava_boost_installing, current ?: "…")
++    } else {
++        stringResource(R.string.bedrava_boost_pack)
++    }
++
++    BedrockButton(
++        text = label,
++        enabled = version != null && !running,
++        face = BedrockColors.Gray600,
++        highlight = BedrockColors.Gray500,
++        edge = BedrockColors.Gray800,
++        modifier = modifier,
++        onClick = {
++            val target = version ?: return@BedrockButton
++            running = true
++            scope.launch {
++                val result = runCatching {
++                    BedravaBoostPack.install(target) { project -> current = project }
++                }.getOrElse { BedravaBoostPack.Result.Failed(it.message ?: "") }
++                running = false
++                current = null
++                val message = when (result) {
++                    is BedravaBoostPack.Result.Done -> context.getString(
++                        R.string.bedrava_boost_done,
++                        result.installed.size,
++                        result.skipped.size
++                    )
++                    BedravaBoostPack.Result.NeedsFabric -> context.getString(R.string.bedrava_boost_needs_fabric)
++                    is BedravaBoostPack.Result.Failed -> context.getString(R.string.bedrava_boost_failed)
++                }
++                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
++            }
++        }
++    )
++}
+diff --git a/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/screens/content/LauncherScreen.kt b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/screens/content/LauncherScreen.kt
+index 256c812..efe85df 100644
+--- a/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/screens/content/LauncherScreen.kt
++++ b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/screens/content/LauncherScreen.kt
+@@ -33,7 +33,6 @@ import androidx.compose.foundation.layout.offset
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.layout.size
+ import androidx.compose.foundation.layout.width
+-import androidx.compose.material3.ButtonDefaults
+ import androidx.compose.material3.DropdownMenu
+ import androidx.compose.material3.DropdownMenuItem
+ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+@@ -89,9 +88,9 @@ import com.movtery.zalithlauncher.setting.enums.ActionMenuSide
+ import com.movtery.zalithlauncher.ui.base.BaseScreen
+ import com.movtery.zalithlauncher.ui.components.AnimatedDirection
+ import com.movtery.zalithlauncher.ui.components.BackgroundCard
+-import com.movtery.zalithlauncher.ui.components.MarqueeText
+ import com.movtery.zalithlauncher.ui.components.PetModelView
+-import com.movtery.zalithlauncher.ui.components.ScalingActionButton
++import com.movtery.zalithlauncher.ui.theme.components.BedrockButton
++import com.movtery.zalithlauncher.ui.components.BedravaBoostButton
+ import com.movtery.zalithlauncher.ui.components.ScreenType
+ import com.movtery.zalithlauncher.ui.components.ScreenTypeLayout
+ import com.movtery.zalithlauncher.ui.components.animated
+@@ -482,19 +481,33 @@ private fun VersionsContent(
+             }
+         }
+ 
+-        ScalingActionButton(
++        BedrockButton(
++            text = stringResource(R.string.main_launch_game),
+             modifier = Modifier
+                 .fillMaxWidth()
+                 .padding(PaddingValues(horizontal = 12.dp))
+-                .padding(bottom = 8.dp),
+-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp),
++                .padding(bottom = 4.dp),
+             onClick = {
+                 onLaunchGame(null)
+-            },
+-            content = {
+-                MarqueeText(text = stringResource(R.string.main_launch_game))
+             }
+         )
++        BedravaBoostButton(
++            version = version?.takeIf { !isRefreshing && it.isValid() },
++            modifier = Modifier
++                .fillMaxWidth()
++                .padding(PaddingValues(horizontal = 12.dp))
++                .padding(bottom = 4.dp)
++        )
++        // Requerido por la licencia de Zalith Launcher 2 (GPLv3 §7): avisar que es una versión modificada no oficial.
++        Text(
++            text = stringResource(R.string.bedrava_unofficial_notice),
++            style = MaterialTheme.typography.bodySmall,
++            color = MaterialTheme.colorScheme.onSurfaceVariant,
++            modifier = Modifier
++                .fillMaxWidth()
++                .padding(horizontal = 12.dp)
++                .padding(bottom = 8.dp)
++        )
+     }
+ }
+ 
+diff --git a/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/screens/content/settings/LauncherSettingsScreen.kt b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/screens/content/settings/LauncherSettingsScreen.kt
+index 01b5edb..218300c 100644
+--- a/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/screens/content/settings/LauncherSettingsScreen.kt
++++ b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/screens/content/settings/LauncherSettingsScreen.kt
+@@ -174,6 +174,7 @@ fun LauncherSettingsScreen(
+                         },
+                         getRadioText = { enum ->
+                             when (enum) {
++                                ColorThemeType.BEDROCK -> stringResource(R.string.theme_color_bedrock)
+                                 ColorThemeType.DYNAMIC -> stringResource(R.string.theme_color_dynamic)
+                                 ColorThemeType.EMBERMIRE -> stringResource(R.string.theme_color_embermire)
+                                 ColorThemeType.VELVET_ROSE -> stringResource(R.string.theme_color_velvet_rose)
+diff --git a/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/BedrockTheme.kt b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/BedrockTheme.kt
+new file mode 100644
+index 0000000..42df2db
+--- /dev/null
++++ b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/BedrockTheme.kt
+@@ -0,0 +1,141 @@
++/*
++ * Bedrava (based on Zalith Launcher 2)
++ * Copyright (C) 2025-2026 MovTery <movtery228@qq.com> and contributors
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
++ * See the GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/gpl-3.0.txt>.
++ */
++
++package com.movtery.zalithlauncher.ui.theme
++
++import androidx.compose.foundation.shape.RoundedCornerShape
++import androidx.compose.material3.Shapes
++import androidx.compose.material3.darkColorScheme
++import androidx.compose.material3.lightColorScheme
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.unit.dp
++
++/*
++ * Paleta inspirada en la interfaz de Bedrock: paneles grises planos,
++ * botón principal verde y bordes casi rectos. Los colores son propios
++ * (no se usa ningún recurso gráfico de Mojang).
++ */
++
++object BedrockColors {
++    val Green = Color(0xFF3C8527)
++    val GreenDark = Color(0xFF1D4D13)
++    val GreenLight = Color(0xFF52A535)
++    val GreenShadow = Color(0xFF14370D)
++
++    val Gray900 = Color(0xFF19191A)
++    val Gray850 = Color(0xFF1E1E1F)
++    val Gray800 = Color(0xFF2A2A2C)
++    val Gray700 = Color(0xFF313233)
++    val Gray650 = Color(0xFF3A3B3C)
++    val Gray600 = Color(0xFF48494A)
++    val Gray500 = Color(0xFF58585A)
++    val Gray400 = Color(0xFF8C8D90)
++    val Gray300 = Color(0xFFB1B2B5)
++    val Gray200 = Color(0xFFD0D1D4)
++    val Gray100 = Color(0xFFE6E8EB)
++    val Gray50 = Color(0xFFF2F3F5)
++
++    val Gold = Color(0xFFFFE866)
++}
++
++val bedrockDarkScheme = darkColorScheme(
++    primary = BedrockColors.GreenLight,
++    onPrimary = Color.White,
++    primaryContainer = BedrockColors.Green,
++    onPrimaryContainer = Color.White,
++    inversePrimary = BedrockColors.GreenDark,
++    secondary = BedrockColors.Gray200,
++    onSecondary = BedrockColors.Gray850,
++    secondaryContainer = BedrockColors.Gray600,
++    onSecondaryContainer = Color.White,
++    tertiary = BedrockColors.Gold,
++    onTertiary = Color(0xFF3A2F00),
++    tertiaryContainer = Color(0xFF6E5A00),
++    onTertiaryContainer = Color(0xFFFFF3B0),
++    error = Color(0xFFF4706B),
++    onError = Color(0xFF470000),
++    errorContainer = Color(0xFF8B1E1E),
++    onErrorContainer = Color(0xFFFFDAD6),
++    background = BedrockColors.Gray850,
++    onBackground = Color.White,
++    surface = BedrockColors.Gray850,
++    onSurface = Color.White,
++    surfaceVariant = BedrockColors.Gray600,
++    onSurfaceVariant = BedrockColors.Gray200,
++    surfaceTint = Color.Transparent,
++    inverseSurface = BedrockColors.Gray100,
++    inverseOnSurface = BedrockColors.Gray850,
++    outline = BedrockColors.Gray400,
++    outlineVariant = BedrockColors.Gray600,
++    scrim = Color.Black,
++    surfaceBright = BedrockColors.Gray600,
++    surfaceDim = BedrockColors.Gray900,
++    surfaceContainerLowest = BedrockColors.Gray900,
++    surfaceContainerLow = BedrockColors.Gray800,
++    surfaceContainer = BedrockColors.Gray700,
++    surfaceContainerHigh = BedrockColors.Gray650,
++    surfaceContainerHighest = BedrockColors.Gray600,
++)
++
++val bedrockLightScheme = lightColorScheme(
++    primary = BedrockColors.Green,
++    onPrimary = Color.White,
++    primaryContainer = Color(0xFFB7E3A6),
++    onPrimaryContainer = Color(0xFF0E3B05),
++    inversePrimary = BedrockColors.GreenLight,
++    secondary = BedrockColors.Gray500,
++    onSecondary = Color.White,
++    secondaryContainer = BedrockColors.Gray200,
++    onSecondaryContainer = BedrockColors.Gray850,
++    tertiary = Color(0xFF8A6E00),
++    onTertiary = Color.White,
++    tertiaryContainer = Color(0xFFFFF3B0),
++    onTertiaryContainer = Color(0xFF3A2F00),
++    error = Color(0xFFB3261E),
++    onError = Color.White,
++    errorContainer = Color(0xFFFFDAD6),
++    onErrorContainer = Color(0xFF410002),
++    background = BedrockColors.Gray100,
++    onBackground = BedrockColors.Gray850,
++    surface = BedrockColors.Gray100,
++    onSurface = BedrockColors.Gray850,
++    surfaceVariant = BedrockColors.Gray200,
++    onSurfaceVariant = BedrockColors.Gray600,
++    surfaceTint = Color.Transparent,
++    inverseSurface = BedrockColors.Gray700,
++    inverseOnSurface = Color.White,
++    outline = BedrockColors.Gray400,
++    outlineVariant = BedrockColors.Gray300,
++    scrim = Color.Black,
++    surfaceBright = Color.White,
++    surfaceDim = BedrockColors.Gray200,
++    surfaceContainerLowest = Color.White,
++    surfaceContainerLow = BedrockColors.Gray50,
++    surfaceContainer = Color(0xFFDEE0E3),
++    surfaceContainerHigh = BedrockColors.Gray200,
++    surfaceContainerHighest = BedrockColors.Gray300,
++)
++
++/** Esquinas casi rectas, como los paneles y botones de Bedrock. */
++val BedrockShapes = Shapes(
++    extraSmall = RoundedCornerShape(2.dp),
++    small = RoundedCornerShape(2.dp),
++    medium = RoundedCornerShape(3.dp),
++    large = RoundedCornerShape(4.dp),
++    extraLarge = RoundedCornerShape(4.dp),
++)
+diff --git a/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/ColorTheme.kt b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/ColorTheme.kt
+index 3254fee..9c36098 100644
+--- a/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/ColorTheme.kt
++++ b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/ColorTheme.kt
+@@ -31,6 +31,7 @@ data class ColorTheme(
+ )
+ 
+ enum class ColorThemeType {
++    BEDROCK,
+     DYNAMIC,
+     EMBERMIRE,
+     VELVET_ROSE,
+diff --git a/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/NativeThemeUtils.kt b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/NativeThemeUtils.kt
+index 3dec1c6..3c9f739 100644
+--- a/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/NativeThemeUtils.kt
++++ b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/NativeThemeUtils.kt
+@@ -203,6 +203,7 @@ private fun getSeedColor(context: Context, darkTheme: Boolean): Int {
+ 
+ private fun getPredefinedSeedColor(theme: ColorThemeType, darkTheme: Boolean): Int {
+     return when (theme) {
++        ColorThemeType.BEDROCK -> if (darkTheme) 0xFF52A535.toInt() else 0xFF3C8527.toInt()
+         ColorThemeType.EMBERMIRE -> if (darkTheme) 0xFFFFB598.toInt() else 0xFFA63A17.toInt()
+         ColorThemeType.VELVET_ROSE -> if (darkTheme) 0xFFF9B2D2.toInt() else 0xFF723D57.toInt()
+         ColorThemeType.MISTWAVE -> if (darkTheme) 0xFFCEF3F9.toInt() else 0xFF426469.toInt()
+diff --git a/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/Theme.kt b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/Theme.kt
+index 605eded..8cfdca7 100644
+--- a/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/Theme.kt
++++ b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/Theme.kt
+@@ -22,6 +22,7 @@ import android.os.Build
+ import androidx.compose.material3.ColorScheme
+ import androidx.compose.material3.MaterialExpressiveTheme
+ import androidx.compose.material3.MotionScheme
++import androidx.compose.material3.Shapes
+ import androidx.compose.material3.darkColorScheme
+ import androidx.compose.material3.dynamicDarkColorScheme
+ import androidx.compose.material3.dynamicLightColorScheme
+@@ -622,6 +623,7 @@ fun ZalithLauncherTheme(
+             }
+ 
+             darkTheme -> when (colorTheme) {
++                ColorThemeType.BEDROCK -> bedrockDarkScheme
+                 ColorThemeType.EMBERMIRE -> embermireDark
+                 ColorThemeType.VELVET_ROSE -> velvetRoseDark
+                 ColorThemeType.MISTWAVE -> mistwaveDark
+@@ -637,6 +639,7 @@ fun ZalithLauncherTheme(
+             }
+ 
+             else -> when (colorTheme) {
++                ColorThemeType.BEDROCK -> bedrockLightScheme
+                 ColorThemeType.EMBERMIRE -> embermireLight
+                 ColorThemeType.VELVET_ROSE -> velvetRoseLight
+                 ColorThemeType.MISTWAVE -> mistwaveLight
+@@ -680,6 +683,7 @@ fun ZalithLauncherTheme(
+         MaterialExpressiveTheme(
+             colorScheme = currentDisplayScheme,
+             motionScheme = MotionScheme.expressive(),
++            shapes = if (colorTheme == ColorThemeType.BEDROCK) BedrockShapes else Shapes(),
+             typography = AppTypography,
+             content = content
+         )
+diff --git a/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/Type.kt b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/Type.kt
+index c556f38..3001ded 100644
+--- a/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/Type.kt
++++ b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/Type.kt
+@@ -19,5 +19,37 @@
+ package com.movtery.zalithlauncher.ui.theme
+ 
+ import androidx.compose.material3.Typography
++import androidx.compose.ui.text.TextStyle
++import androidx.compose.ui.text.font.Font
++import androidx.compose.ui.text.font.FontFamily
++import androidx.compose.ui.text.font.FontWeight
++import com.movtery.zalithlauncher.R
+ 
+-val AppTypography = Typography()
++/**
++ * Bedrava: fuente pixel (Pixelify Sans, SIL OFL 1.1) para títulos, botones y etiquetas,
++ * al estilo de la interfaz de Bedrock. El texto largo (body) queda con la fuente del
++ * sistema para que se lea bien en pantallas chicas.
++ */
++val PixelFontFamily = FontFamily(
++    Font(R.font.pixel_sans_400, FontWeight.Normal),
++    Font(R.font.pixel_sans_700, FontWeight.Bold)
++)
++
++private val baseTypography = Typography()
++
++private fun TextStyle.pixel(): TextStyle = copy(fontFamily = PixelFontFamily)
++
++val AppTypography = baseTypography.copy(
++    displayLarge = baseTypography.displayLarge.pixel(),
++    displayMedium = baseTypography.displayMedium.pixel(),
++    displaySmall = baseTypography.displaySmall.pixel(),
++    headlineLarge = baseTypography.headlineLarge.pixel(),
++    headlineMedium = baseTypography.headlineMedium.pixel(),
++    headlineSmall = baseTypography.headlineSmall.pixel(),
++    titleLarge = baseTypography.titleLarge.pixel(),
++    titleMedium = baseTypography.titleMedium.pixel(),
++    titleSmall = baseTypography.titleSmall.pixel(),
++    labelLarge = baseTypography.labelLarge.pixel(),
++    labelMedium = baseTypography.labelMedium.pixel(),
++    labelSmall = baseTypography.labelSmall.pixel(),
++)
+diff --git a/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/components/BedrockButton.kt b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/components/BedrockButton.kt
+new file mode 100644
+index 0000000..480aee6
+--- /dev/null
++++ b/ZalithLauncher/src/main/java/com/movtery/zalithlauncher/ui/theme/components/BedrockButton.kt
+@@ -0,0 +1,122 @@
++/*
++ * Bedrava (based on Zalith Launcher 2)
++ * Copyright (C) 2025-2026 MovTery <movtery228@qq.com> and contributors
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
++ * See the GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/gpl-3.0.txt>.
++ */
++
++package com.movtery.zalithlauncher.ui.theme.components
++
++import androidx.compose.foundation.clickable
++import androidx.compose.foundation.interaction.MutableInteractionSource
++import androidx.compose.foundation.interaction.collectIsPressedAsState
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.heightIn
++import androidx.compose.foundation.layout.padding
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.remember
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.draw.drawBehind
++import androidx.compose.ui.geometry.Offset
++import androidx.compose.ui.geometry.Size
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.graphics.Shadow
++import androidx.compose.ui.semantics.Role
++import androidx.compose.ui.text.TextStyle
++import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.text.style.TextAlign
++import androidx.compose.ui.unit.dp
++import androidx.compose.ui.unit.sp
++import com.movtery.zalithlauncher.ui.theme.BedrockColors
++import com.movtery.zalithlauncher.ui.theme.PixelFontFamily
++
++/**
++ * Botón grande estilo Bedrock: bloque plano con brillo arriba y un "canto"
++ * oscuro abajo que se hunde al presionarlo.
++ */
++@Composable
++fun BedrockButton(
++    text: String,
++    onClick: () -> Unit,
++    modifier: Modifier = Modifier,
++    enabled: Boolean = true,
++    face: Color = BedrockColors.Green,
++    highlight: Color = BedrockColors.GreenLight,
++    edge: Color = BedrockColors.GreenShadow,
++    contentColor: Color = Color.White,
++) {
++    val interaction = remember { MutableInteractionSource() }
++    val pressed by interaction.collectIsPressedAsState()
++
++    val edgeHeight = if (pressed && enabled) 2.dp else 5.dp
++    val faceColor = if (enabled) face else BedrockColors.Gray500
++    val topColor = if (enabled) highlight else BedrockColors.Gray400
++    val edgeColor = if (enabled) edge else BedrockColors.Gray700
++
++    Box(
++        modifier = modifier
++            .heightIn(min = 52.dp)
++            .clickable(
++                interactionSource = interaction,
++                indication = null,
++                enabled = enabled,
++                role = Role.Button,
++                onClick = onClick
++            )
++            .drawBehind {
++                val edgePx = edgeHeight.toPx()
++                val pressOffset = (5.dp - edgeHeight).toPx()
++                val border = 2.dp.toPx()
++                // contorno negro exterior
++                drawRect(Color.Black, topLeft = Offset(0f, pressOffset), size = Size(size.width, size.height - pressOffset))
++                // canto inferior
++                drawRect(
++                    edgeColor,
++                    topLeft = Offset(border, pressOffset + border),
++                    size = Size(size.width - border * 2, size.height - pressOffset - border * 2)
++                )
++                // cara
++                drawRect(
++                    faceColor,
++                    topLeft = Offset(border, pressOffset + border),
++                    size = Size(size.width - border * 2, size.height - pressOffset - edgePx - border * 2)
++                )
++                // brillo superior
++                drawRect(
++                    topColor,
++                    topLeft = Offset(border, pressOffset + border),
++                    size = Size(size.width - border * 2, border)
++                )
++            }
++            .padding(top = 5.dp - edgeHeight, bottom = edgeHeight)
++            .padding(horizontal = 16.dp, vertical = 10.dp),
++        contentAlignment = Alignment.Center
++    ) {
++        Text(
++            text = text,
++            textAlign = TextAlign.Center,
++            maxLines = 1,
++            style = TextStyle(
++                fontFamily = PixelFontFamily,
++                fontWeight = FontWeight.Bold,
++                fontSize = 20.sp,
++                color = contentColor,
++                shadow = Shadow(color = Color(0x99000000), offset = Offset(3f, 3f), blurRadius = 0f)
++            )
++        )
++    }
++}
+diff --git a/ZalithLauncher/src/main/res/font/pixel_sans_400.ttf b/ZalithLauncher/src/main/res/font/pixel_sans_400.ttf
+new file mode 100644
+index 0000000000000000000000000000000000000000..b4ffd49172839c767ffd715fcf349405964656ad
+GIT binary patch
+literal 23836
+zcmb_^3w#vSz5n;jX7k*TY{C-WBrM@&b~g}00<I6j^HzZka6x8P1hbP6Ab^CI78RjY
+zRIsfN(A#LWx5aBgrIkdRT11MER-4<0ZDXrQ*IR4tUWFD@rDf0m^ZT8deI&u!&;L%c
+zv$JRB{Lb%u&+m19XJ#M(6ksPD*f@9A>^a%1T^|5-D*^1C8(O${XvMj0KwS(dnKgIu
+zzt=te@sZyHdL^KBE?gX#ylUBqMS$22VCCW^GnU-=)pc(J;TQmaL(8g-8O;s@aP9%L
+zHBGBpHv%XG>aGEh-L&q;#<BbN4gqrB0ICM8HdjS1IdIw60sI5N)YYraRaw7xd;t(s
+z0E}7PvU&Tv*H(WK5Z!>|sdXC~R(0I^#Qi|lIY69hS+#v5F5oUe5dG5it6I!Sm5V<G
+zg8u_(b2e^h-R$qw1_D=90FDY!-vy9$VBnPN3W6WQ;dmbaem`ncC4K*K=pBEO-7-64
+zz2g9YOlVZ9>Np;ZzYk;_lHKv2W~^sQsoS5p<U@pzg<53vI`4o$hE^-S3MZgFuiZsx
+zt8ei(CgXf6shvO*fG^l(3l=VzjpHaC?NK~9{zH_N0^gwX;)M1*^&AfEhlprjK=89Z
+zj`n`f5BjV+bWYr#_L)S#)9T1xzkBnsL7l%y`{}fL*X@t?w-LP9Cu3bd^seovtXDfY
+z1^ZKiQy7a=@{B5zpNfwVqz~1hvVM6=r{|&HpV?pPLwX(c`$|l{7=5B=f9$&A9t6cI
+zRkzQ$^h4iKiJ;>K1ReJv=x9OE@jQZ#)d)JCM9}dXf{u3(6a@&1b?Spx0sfpqP~@rp
+z)3>%efmebTzD85masS*1(g$y=kC=}VaUX)B2SL$^pxDZvk>Y38$Nrs%p!j*phkoZF
+z=xD}B$G;<2t3Xhzz(~G^c%gn0o^cC@hcJge4iAE2nl)x5$1f*&)xKpN6OY$mrgjZl
+zv}>@^`le$lqmQXwgCkUKx8-O+5Rjh&XaMLK^R3Sa01*Jg0OSBD78UYuA{RkXfgt8%
+z1%@FX6|CE2T^s-gvVEZM3~ecZDJVq-1|ooIxCP(FVMw8gNn)|~vi4i;Er)PqII>Fz
+zmJTf)SvtCOZ0YpU!)2pK7mfBv$+n;p)A1-C$5UKukyQ&0ha<bRxO8yoaIQ5ityajk
+zHd4q^AnuJ9#tSZ-x^Vi!8>h(@;`GkbTTkygJ?fqRJaz2U_aQ(QI)rXSLAD=)Y+A}D
+zZV|gueyVLh9>x#xE&K$(!*LwLlXwdMiT}n!cmfaN+xQQB9lyda@dmzu7a)*}JmjMQ
+z1L46SlwdeUU?fJN6r(W_74X5204h<9si;9MrsKOfi0|P|9L67UDQ038=3pM?V*wT-
+zgk@L`9R|W!fkv!GGuB`oTCfSN*o-aMj;HYoj^H;qfJg8uUdNB|Q=Gti_z`Zw_tA}$
+zh~Z`Y8u#M?ypP}FMLdT8#eKLHo!E!Fa1S13zmb7#IFW@MxKNBjxKV^*7>pqpiUBCY
+zSa>l8<57;EV;rVn5+<Vx({Ksa;tB+D8D`*eT!}i&#?|;Yd;wQsDHdTdmS8Tf#r3!j
+zD-ppe`~nTQ0qd~=8?hBl*oFx(@hqOhGiXN#jxzKf)M6Gw2xB!iV<-0FMf^cHM73BV
+zz9=3RPl$H$qWG!!gO;O>(WYs$wR-JZty$Zx9noIWVvamViDQc6O2^fXYa9{B-Hro}
+zA3NU5&@#qnT%EBg<L->dGM>!%e#T1~KhOBcImlV(yw17SxzG8Ov(x#q^B2yyoquwE
+zoLQMUKXYy7!<n6#f5^(pD$W{}bxGFLtWegLtgmE!GwbQB&a9WRewOvStoO41o?Vzd
+zDf{wlBYR`^j_ilBzn%Tv>>p;on*Cw+`J9TJf6Fm*cIP~l^K8y<az4(@%Pq<E<_2=7
+z=Pu1{&HYC1vD}~J{yO)sdBgJN=55ToC+~^8pXS9}Ij)heS*|s%yIn_JZ@NCpADn+#
+z{_XkyJz)HRwF8b7<Q6m*yj)mRIIi%j!VUa)Q{g>@-zfZk;m-=Ag&(^;?rQf8_k4G=
+z`(F2B?j!CWxL<bv!hOp9fxD-usK{Tmr0AxiuM~Z&=((adi~e3bqIgpA?BWB(e;Vi+
+zIAdVLz-<Gc8~Cxu?Wy)eJa>CedQN%%Jg9Kcm4ns~x_?l|py;4@Nm0qjlA4l*CD)hS
+zQ_@-TM#=jne;b@Pc=X`w2e%Hsb?|+IA0PaK!LJQ|d+^!8@gW66N{5Ue5*#vX$kHJz
+zhO8ZO2LKHbd4slGdl(L60VVD-cX^q+EFwORZxolrfAtkd#XsIKwd?81pggDLYuiwO
+z61uXgx~jU$Q{}00d#lSl?y_ocwb$bf8hWE1Zj7H7nffB#CAxIO(BqTa+r`lD=(?1O
+zilbf|%aKkN-oZ{BO_Y}>%72f&{g$7`SNbh~3-_gzC+VL;Yf5>NeiZvs%Eu+zeHVA&
+zsOqg_yS5FZFfOIH)n%S45B0ao<MotPt9^R!4~wCO89(3NE;3Ccepeb2h7r*ZH5@if
+z-2$X9uGL<*)e5&!PPkT8mmM$+F*F<whvR2NW=BW-yh|5dhH)%(T#p=XI7HE@JwC-i
+z3YF?Ix8hS#;E`zzTeXkI=X4y`xo$0wE%i0YL8314LVfiTGoC6M>gqIl8~r}tz5d!;
+z{Ju2Gm-uRYz8as`SDhk1dCZ}kFsyQWJzmeas%jD<Z%_==!(qMSu&y6=X}b+Q{zpTP
+z7{aMT!=Qxp4PzdwtNNipOa{k}O`&t`wXO@MC`+OByqSU(Npfm`Q^qyXzm5)(K+GOK
+zBqVl`HWmedCCTlH^0A3>lGy&rNn(@bNjfC4?I}FwvtANsO77f2v4zI5qk}*qj^bxh
+z$A3t#J}K2?UG*k=B{KDJV@HZ0)Ef=UEm^SjoV1+u+*9SQa(mrn?w}cJ3^g{!&%3nU
+z@iT@Y3NPF&3gc%Kw_=&L4SCeMvI$;yl_zKzVpurriil3rjL(TEe8e*DZ;6Flxs8KZ
+z#<;2S)0o2LljJ$EHl_S6)TUfdxT)(;VQ?C51(uw62!S$|wF8DJGUI1RlU(}o4$)~E
+z@ySa5RiC|<u9L)*ePazL8D&ey^6#zox`ReU4~6x{Fv)AUQ4fb)+IYh}Wax&e>mgEe
+z!$=<$#>MNdN@%00q)MA`;rE7V^Ke4j#`3LDS3D5sq$jjjZHGf)Q;*b#BdT4az1=V_
+zbZaAz#?OetqZgv7(m>Y0t?V?9BJ=Nc2TeU3YE+z)rkxchFWjsfq97hj%Jz6|EJ}Hd
+z$SSs{>99gq*($f!LtewOQDmWP`xKw7M?`0mB8}GQi)f1~@2f4Uysx&Xa-}T}1m)}6
+zWbF|Ypa>qIq=tE`smdbm%Cc&Ty-r6}a9)ie1`KMPHzgeJ8C3ZC>mu{jSEuX}UB<Xw
+z@yYu5Ux^z+@%;%Mrv9r|Qu=Rs1(Fooa`fvJQZQMR<`Ujpl!{Q&CFl%Q($D5G#tDSU
+z%ec#e>;^0X+IYi=zi+gQp&}#Ilh`#qO6tozWXOZ2C{*r))wj`z|50D~jG$aaP+rN_
+zznC=1$<{qNvLySW%v~nthjrzIbX~Q7e7V6+C_Y)QZxDk;XDSa&E6F{ZW}=+ZiwZpw
+zzJ+DQ>PUS=w>p#bX12BWlvP`<(6WTeR$Cg)jFE3EB+WLB!}>7>wjYZ|Ud$dbulsDs
+zBt#oSE^VY9p*k0$DXk~9mMoxZjl3smtv2eyZ;}xWNjBwzR78`s>*NPid0)v^<$Wbv
+zmG|}o%CEBxVavcAc|B*z<}4yx<kCAtYy3b*hiH!P>(Fg0VA~W`vzqEz7G2ph_6lYw
+z90}J)bTb^Xy4N8F#Q)O4ozy#$)F=XE*(d90#RHa|vhAcAXRjw{=n3A)N-ok}k&e(&
+zlkAmwG}IC4O_yy|ADZrz9*Q;k3+;x{{(>IgpKeuZlh~(>pYrcC-qmHc|MZk`<VM!2
+zFn-<?Ta;Eby7c4A59u!$$MnO-3zi<P7AH_(A#Z6Sdw~>tXP8NS9%2~rvk_9{Oq;va
+z+QZsdTxxN5Cz9niB+5_Y!G6o%LR(6?O(zqlcJxOjiv1~9w<f5+i?4E|AC%`Z0^$V5
+z;gS^F#U9?)snn>Jr6Z-E^<lPRpLTSJEYpa;x2Si&MS)>7=pnN{Y#KUSGi6(pXH_<d
+zWYDro%44J&C0(1)PF9J~v&T@JNJF2-FyTR2aVfs$cy<W29zSpU(prt`{-4CNNy-<A
+zXOq5=BA*0iZqqi@x)@@#U-*scnX>Se+VdEU;Z}@NT~?jtt+7m#<+RGns>>b>hehF)
+z=E5V5VWCYjH!U=5-*J5T0e!t5F=jtXKK5`5UjI@|%Y9R0X3JDQOWM4IJ|)XZVpTcW
+zvi{1+mL<zcV(I!!oN7&sD9<2m&tU7MoBf&<)Q(p^k>V%9>Ixo7<xhD2k>Uy5UXLiF
+z*^w!-;vZ40X&CX3L{|LM7xjpK$T((@cM_Wq+4v+{x8hnASq06|@o?i|-3n{t`@|YO
+zenyQH9@Dnjv*Rkaqq@oyG)>bby5f_yk)~<&3y+Btl#`=~IjGJO4khv&o?sm68Haa%
+zLZxHnIXuT`s?yVMLP~i?p2LSJrGI$aLK5FhDSex-{ZtZPgs-A->W7Mtzl!gP6PDMq
+z<96~|hfO2jFb%OLzSsCyuT=W0=KR*IKi$#?%}_^UxT7Q7*byQG4=gt#dOgL!?Fn=k
+zLmM4!_l29SGujDp0&Y4}MqWh4x-=^8pcoc<QI9+sIqagDE)Pn4zgQFBZ;z!oL77sn
+zsb(i?UPPDE2&Q-lwuWJrXo}<#aSCIV)Lxz=^cTsJT~~I=jtv?66&KMFRo+)eRC!+=
+zp>m}o4tV6_+5{o{k7K=AH8oymR+VRay&+K1*is*sHDjNCT4X-?<nqVG5aY53<A2oW
+z|LEMnza%*&PoP>(>APdQIDt|BH&N^m!$`IKWWGsnXR+Sev8Xiz>l?*BuX!2WBVr)g
+zePta<PwkqY6~*3a#NS&!^`X8kIw@MTJT^zKkMn$WXgGd9MV!wcA(L!ec$*uwqD@P4
+zR4w*2wpDV8R`xFYZK<VeIUY;eqB1KY4T`ng)Yka@9F0cmjRqqUvi*|MCYqse{(|FT
+zjz~F5;kkV{96sK`IUa3yBEyrM)veaH**=l#5I(j~JgXZ<L=?q86xpWX(nVpUy*-lj
+ziRY{lQ8O2Jub5VBX7$>eh-q2ITP`Bws=Tj^tMa}wPUW^Am@Lm}4jaKf@t)^>BPF6e
+zcC@48=&@w{nXnfexu`iUMVy|Xc{uW9M1L_vrkU*oSvy@%#KAOX{~wX7QLjgg<q6Yf
+zSafagM3~Z8D7j0)mi&@QA(Qe*Vo3a~D6nS^S6JS5OD~kEoV=|nXEal!lqFB)CpfNU
+zdt65Gb~yf#_<2|liy~LVFhY@tZq!FqO`f;XY)Z*@YRpI0lVU%X_rzp1>5XlFtc^^`
+zH8H&red(34E$)Y+Slbx?doQB#eUv`xOE;a*1hsyswx{t)SrFnejUrnU_A$v`D=uyQ
+z7V9{tr2-GdQv&Zq#Gou#3Q{TYirp@)%LT<1Vv*L$^M(?jm^C|*KcZ}>x7b@<wZ`w?
+z=l4yXuxIz~J^S{Fy}o@u-=4`n-{jr#c$H13+_HnkKrzp<ILYp*sq%PBs=b~y`-n&t
+zQ4l}$5rutwcJHpL>SIL{wlEo;4oxHj>`6RjYLu)bGI`c)nfx-%lp|qlntY)<6(4(!
+zZq2eRl*uk}{>+|fB~lj@uhU#BV(?@uk^Lg9ZCb2JYSw1cquGg_!K0ZQ)3fIL4T@Um
+zIOU4%OgLwn$rD()Jn{srEaLI_1BM<xPR<|{)?Mw#4BfbJGv!fI>;-546MD_FTALTv
+z9+eYkjyhCoq%nS8?@%1o8<c`LcJ$D4>R*y4JC042MeZ4e`-z-$N~(rOC!$j-BXT$u
+z^*q4ordh3$O!2q{NpgrNE2gBMTD6f?o`%~bM5$f+J3wAMxyC^AD$3#=4^cPlWrn`}
+zux*~jMKT`Gv>a|?4rFCzC?0P;#Jv4gJIB6k6wQxI>`_YOT)iGgiu?(sM?5d(NKr+h
+zeD&iCLksJdFRWh}YAUbwPYZ|@fxzBf(*pbb{=K_u{jUFdWZ^d!{#WRcg^!3Sq9jlo
+z2*gjvU-Lf{SWL%_fiJIG>sK5(ru>T>@oGpqSH#(y3636896eGwedk?w?VMhDe`RH5
+z<wZCO)cP0KF7gvkW10dMM~j%F0Is6koF&Pr7<~pVjM+sv6uF^=p^zR5g%+MyFzr{M
+ziF+=}>STXYU~yoY-};LGv=_t3Kv4eGQE6d#393H-xKd_{Y$FY8Z}hbC9|Qva)j!x(
+z?hjl9x@(*K{y_Y@59|u~EiP`gaHG}yev$i3bSzX;xf0_Oh{gXDm`1}nEx^O6&HF*X
+zA87i)?(#r7f9d$d)3|gpR+m^<RiWndYk`XUNY3a(sF4WvMoruo2m}KAN#6GE+O=!f
+zMUV?LjcE$-ZrbA7C9wF~XrWhyxfheX&%)1HRqf4EY$deS=2eVL;`rAz97V^jUAfFO
+z?e_L!IUUS@EZ&>s{A7afdzf!R^C~R-XXDPXC;MjdtCo-cY~F(j#g6~VU%TttfZxBr
+za{8{owUw3P7rS@o`u$Wukni4|3V2nZ);}iTC!|*_@ds)HfA63FZ>GybzZ&1iD)z;g
+z<UxcIygsw5*1x|}98PlATOg{$V780z#9vRs$^sz}6yxy=wYFEB(za#U#@iN^uN*4^
+z+7|LPR@~FCy<U@UaK@&a71g2$sAz!cT*QX0O_!eW=@LS806YehGBY&Jl)0f&c@SMN
+zRi1>Ehh?+bZ<s!xUOU<}ruum%ih4XInpF0urn<^A&Z1Fon%|2=*c<*0U82d(ZYF6_
+zo=DL%&72x9Q53F7gyTB8!<2c-A`U1<vOi)#WBgT9TxqJ!nhhs2P&Mu<cb3J&6O@5!
+zx41~ThB8p;S*lUgZqjqRY4%ye{+h%@MFL(A(LLK?hgEuG;}gdY9VOqd8;Mq|NSbD^
+zO6J%PsVI-yJYX1lBQKX9Z*&<iEH{oFYJb6C21tr>@t9aoV^Pd~5V;Yao8S|?B<Q|k
+z#yEKACwumAoFkq?7i$AupDyDx-}Cu=wLYJ(W{h~Qc65#3Uo*Pa@3;C%bL3$dW%Ft2
+zhthN&Yob6zIqHcVZlvI+@$lipF5Ns7X>V_Dj~p^}U4Oy8vqJpR%3z5q5fqm%kDo}*
+zV%cY%qDqLH;wP4i%hl<NN?^ZoS%O!^B;iv?lzB?T&{vhb;;dLImfGb(G4yPr{QIfp
+zH{0b9x7bo&<_U^AJ5RY%EYm)=vIi+6sB9l)4`>}p4?p_c(HCgeedyU2Xe36;m13G*
+zFKyk2W3Z6~o=Lk$UwHNq&DdW!`kbowfVfZVvLa8)R#@xWw2I}Wy9!u--r)Lrq~4$v
+zz_o@bY!HPs=Zv2X#m^WfXDmmi(c&3N6;rXsmeyt5Ue9(tvPjn#Mf67M%v#EM7KTIt
+zO*P_Y8scZH?B|cfGVM_-PpY_Zv-BSC=(x<##_N#_G0yCcls^*F>?`T62F_4=Ms{=@
+zH;l_nZD2&d&~4HDoHj)s6!)|3;kDMJ#bA?dNvNpwhZ`#@WU4{3%o5!t`<%F+t#Jup
+z#VI_3YJF54i-6Bp>o?+WR8-XZ!{Rw(s$W^58n4-x#^>OIl#HyHZ5>IUm44<WY&~<a
+zI<3Xt*Ckt0*3l*ljYinv)4Jfr+{7xhEu$Pms62=5r^#xnIT=d;%cYV>x=#7>Dv$Px
+zPST|Wo4>>HYgLJ1n6#p87<zcEVdzE!?M&U!L-gIZgluT8e84dz$)g>OC-_LTYxA0z
+zdw#|>VqStF`yho!yJ)Rx=tf94bow?LXxFzy%?}^Y@|j0_E&nqS5|8TygRX98(e-e@
+zaIh74KzyX=Cg*Aw?>Soq+6c-pHPKHG*e|8ab5cSssu8x(TtpU=6#B?m5SMHD;vJ3;
+zQN!FT*|K9ll}oe`qf(}(vM%(SV(kNdpU?llK8mHLjJj*$#JeVx`u)B){r-*{w{E@M
+z?~7IV{S`jb=NmhA>`mjw-B4Zc^ZB}cwRce@K{ImlPIO;k!1hl{I+DKF;)d@bQH|FS
+zBW0c{^00~9FzmHwolKq{Kd;lR4<U6M1K)(iHuabh3Msj`LVHnVvz&BK7-t~VT8qk#
+zYZE6=+4-Var;8H9yx`M*dBLaZDZj7oD^uvIsG(ZrylHP|57a#v@%zO(D|JAb3$s1~
+z2j+<D#UibRV<m6WW{}Pjs#ZinzbO`HU2gUHzU%it{_w+-i;6CH51Tk~m|I-$KjQNp
+z@z=KPbYEUvJhX6P@d$S>>dELcg}UYatG!98e%Dx6zBfs+b&|`K@2X_`I6>>?7~&E@
+zSYFGL6t!l^GD7#nsqDSQw_Ds9sP&ior~7Kg`ltEF#D7y>>)-FMEf*8Ss6fCl0)hDN
+z#h~!rcZcI2h(Q!_*9PJraEp8J4{e@`B$GKqh0V$_W44bOvpy0Ld&;+#mv1fiH&`QM
+z#fE)W)&MPEyN{4y*`gjWkEtu@UeAZi3}ac#QXaL;#_-bXX;q}5fn4w3^@x5wG7-dH
+zahK?3zEl=zl+qjvPmUWY_AB8rtm5Mb{r(61{<F2Uwf@^~dwSZmX`TN2{q$d3D+boq
+zKDF~bbwJ)hKBVPqzpz%K$WkTNcT+gF)>gcp^9|}2KEr5ethb~sT;D`ik?;B8RQ2-X
+zx@8HK<f_b9O2$ojD*F!JMAq%uXP<pGd9UZOqmAaIh)y@iGN0$PCT$z9gK`|hakCXY
+zs|Yw~=wi4YiGR}3A+jU7D<V#+%sJigYtx{tqPlm?(j?VqWoeZEvbj4;cTptopwV^R
+zwJ72>E9_ffDok&L9;qXnBHmDua?&y@TI7e4Q`VFTDb<^aW!gZkoIE($LVH9%X>V`r
+z=velh$noQm@6dHEI4eF##+fa4oVgMk#ox3Hu0O73Tun($NmfbLxTogcwrB31+ve`v
+zKKI6rb8o$4?j1Yl?%Xz)R?%BfFFp`|=NT2ZT9%L>Mb$iOnva^Mn4{(_Ex1GcS=^y!
+zV8zvC9%pr#r$yWn-z9DlqfPVcJcF1iAJ7JVe$O=1cB!B3nM5jG>#n%Z_M}gJE>Eh#
+zl%I-o;?GLgQ<2ZAF7xz!?Q84qz4wCn%GbBA+`fI~_HPmr0!Q$YcwAH{)L2^BP9Ax%
+zeELJ>FEvq0E}+Kh74d<%gPs>G=lr?&a{PU9^DBmVoFqjn;yD$^Y}R=5T&mVrGe#?-
+zS(KmW--*>*wk&F;u*?(Wn^xmzp4V=%)(VgCj8>j=jAd&%u2;s7+puFH`nIx_EaP_U
+zN|M?VChWoyJxq~E&@dw5uvp8%1Fd8&S9jJ@oFdjJ2N&P3o3u~}O@6AmM3r`fk`l5-
+z)U&L{4W{Ozi8KTnG#7r%SMc1kp^?ro9xilg4=X$pn&>&;_tp4)nybQJ<M&O4z<kYx
+zckJtuy_)ay*ZBOJYpTy*<EN)Y)pa-Y#&^EL*OkC`gys^3+70x~1<i$t-w`#pPt{ze
+z-%s&*B*CwB1$oGbIm_!M#>>1k(!(^DDAHQ3wv@-L_Iie~L})HcBm{Cam+)#~HSaF-
+z<cOh~iy{II#hOdFZQN`=iW{qJ+%)+&@vfMp%}Yl%r*VTR-X&z|ZU_s(Oq>F771V~K
+zOM5bbfMth*3aQ}=DJc_3W#Tm7kFi1<fgfqRY)w~@)(Y<N2=1|zi5_R-U2ZF18zIJV
+z9kvbmVklipTvW(fF$CrIOqb9}j;`0E^P>tiexL7EemtQu?5pvqC(Uwk3q4hrLC@eF
+z75s!<Mh*mq;=EO^VE|&*u>+UmDeE``6Y(YM*omQ7V;yH=JnF3D0hkJxIu?M7pW_o5
+zIYKbaWiZi<CVtY2p0?VIjcCPm1Q0+g8n6k?*oe(&g&(bG#ya@10h`c-02X2nu0{yW
+z*bWox(2Pdhh{afi^=O3;i(sM&Td)qRun9|H^0RBr*nssY#U%Jq$$z~mlqP7D_M(xj
+zb16S1w*a$oX`lKR;~<@%i?=$HpHI7y`>v2F#bi`sGA5xEORyRyN<X7Mo!f*BSOXIc
+z*o;!lz!q%AYDTUVr5N7_>n1ew6<csU{Aj=iv>?D^(+Crru^oXvE&38Yoxt+Un{3Bq
+zb<}J7ke*V<kA;R;a6O(x1D?WHQI4^QU>yF0@i6f!euCF90TXcvD)2gfiZ1+j;>pEH
+zXvAdv3_nK`eu=N)X&gZn{ufgc&osV)Utu+VjcJ&UOA*AMaT#Wz8Edf)Yp@<IcoefS
+z2OBUKA7CCfvP9fqJu`SUeuK@}ifzJyEtoGdtS2Gsu^o$WBff|oxCxKpW_%Zm@gbJr
+z-?0>TVi~T%E!c_MaBJe3$rw6ut#FD=k%i-U5f9@L6epg|RL?dJ!*HAv*&+uYqetY5
+zJmC`gVt^<Rg>VQr+$i8@I1eEM|B2D~CVqrFkdI6h;R;bC=vm3{;ThB+4=$|0N`4CR
+zBwoT%ewy)FJb~}v7+!!Ax$q(fdvH7M#$DKp-M9{4!Vi%p2I9-uFFY84k8lRhp%i5p
+zh5N7y-@*(r2-%`U3>HJgP%%sl7bC<-F-nx;9?Zl(bmMKjiQnQ>=8Wq%nOn`AX8*bk
+z4eORHx+-hS`sT{XRW**r>l&Sn*EL?(%=>jzK6z4gmGwO(XTy5aY;Ib;d9`cv>P@C~
+z+?v<eywyH-wVGSa_3ENlrdwGz&HA2feKWnv${Ce|HkzB7H$)oD^_$I2W`x<9Ib+GN
+z{)_z$t6I&B*;_VkV16b~s<!B<@2bjL{#{jBlhd?m)mF1%L(BC!s~Wa!<|FHz;-RW?
+zs`YzD&gSNIk<=@u3?MYBDr^1gS8dv~VH*U5r2E|jG|U1p0Kg^;fD?X{q7;KM7#aj_
+z#LaB=Gay7c<zkQtq1^}}g7lUI2=QBJ$bvvV1PZVe0@q->Ra3)Tcnc1k!aH!_UHlJO
+zVSbXDtgs6LPQ1lu=^VZ9As6GZ0NSiMS1-YUb*nb7#{guI9!p8SlxsWInw!?6v}M(%
+zwHVs6wq-2_T4(6I_0|YDv?=f-8<{BNXOjhlHV}g##A$As-um!m?Mbe2irWy#h7f1O
+zqY&bGxUfaslla@iN4vxh{@ZGO?+_cs8a|F#e=Dpr*Cei>8hgYdu|r%f*6^RAVejXN
+zHR2kJ$_{a*^*5crrwBj)?GWRwBfl6eb_l=NA%-XZ28lwkL*$B##5GiFH0=@RYw73{
+zu>*feTrnE4)axNcsW<^47V~~S?|;YpowUaWZ5xERnUCujwGDjy2_5sQkr3rnqTN7y
+zA-LSn*L>`_9zy(%Db#AuLx`PpjIUEUe!}JDRE|#^BtPe^5^C|BwuZ}zLb<jT8jo8(
+zzZGR6@==eaSilmugraZw0gMOu38LWujW_ONE*|0iw|P(Z>k8b<`&0?kkPR(+IC7ym
+zT_h8k=bgJS0)vvCMDp|V>6?tE{|01?u1hahHRT>Y6O-L^RquM~+r`eO(^Z>l5g@wu
+zrdmq<r8c|1{Y~3N+hTsx>84-byQYj0-PF?5V|z>G^Pg?9i>{D8vP&IZe3L!)x&GQr
+z-()nk|Nm_JXDz30{n71>iH(qKBTm!hL6xLZRGZvG->E%Q$I14R=Mr+(*<X$HO`f#q
+zGbicidT+_L(zhf&7rR1jj02Bn>ZbZ{Z;C?iz9l#6n>-?8vQ3rAE*eW2m2I+1w#jaJ
+zP-&Np%5Hg5w$T~7Qnf3)7?T7KGAd7U?QVGsmCC5R*Oqrnmecgx;>*@!s$pTq#}-cj
+zw_<4{mC81G(B>gor}t*-TXM5(i8V&)HC5}Xx2gtdfX%O5!)UWk$US__SM}Y~Mx}|K
+zq{^hgH0$jiF63iCpLcsySnu_iic2wzqg(q89`*bVjO2SflJD?n#TJfNcjHUA9d}?4
+z?!<#=<9P894&xPQxSW0S0OTMC1CYyeIBGuw1t@?61L++s@W2BH24N5~P=XQ+#0ZQ)
+zHb!D3@-Packj)WI21a8v9GHL!a9|=PA{&?B5@etP6>z`@AF|<xA1<Ez74Xa~4^uG}
+zdAJmp(mgtufh^Ra4o=L(Opcvq!-+YVi$cu9JUH=hxSDbjm=6sLu@D+U2(hQCM=lm)
+zG4in#OOel!y2kG}$;Aq+fD_k&JYod2LT|!^6HRD>hSgXNC)QvMim(=Ip<x}?p%^V_
+zfd}hx12WNyR^(zQzbouE+=c?&j@#kDowyS&Jcx&ogEq7w2T$M-+&GNG$iXu>iX6Ox
+zSCE0%@ERP@K)EP^LgXTs@0M`E&A4YXzC{?0;m{c6Vn%r&qnyL|YK$h)pnLmh4((wa
+za~a26#&Hl!NeSj)4u&&QgRuY$AQ-QF#w!E$sK*eNpA0O+GB~ju%P|x>bYwDWf^iXO
+zMl*&nIs+J&0>;J3h&ZtYTQG!i(HNH;?8a_nS?Jt>J9t*I2U(1ih6nK=@))T+M#{xV
+z<w4*sjuNkQ?Qk`^mbjL<{4Rf9VP0nLC%GTyzMlJ3?zi$Xb3e>EpZj6X>70W(Z8;;e
+z-^i}Z3T6H!^U=(ynXXKi^OW;Z=S|LQoKu~Z&Z*9+&XF0PWc)f~kMkzyO&N<a#yHM9
+zc4{wc<HbGBN-;3^!`yGV8uK!9PSbbphhhNz<z+(P$~1kXsJ8Fhc6z^SN4;N%=AQpt
+zJCkqNp*dx$j?#SY5MF^mt?a@`<jNTGWDG7DLxGIJBV!mXW0)XgsE{!P<Q~+@He4!W
+zsFN|wl2Oc-G0c%M%#|_BlQAriQLK<Lm@<adG6u3*Ei#HtGKN+e!*<z&oic{o<R08E
+zV|Y!*F!pn`TrFc(>s_dmU6{!nbYZsaO5vaj^JNSRWfaS047!YAh3tYUyU@fObz!ZH
+zVI6Z7OK`P?Ig9n-Y}~)dSrm0LYH=3BY#B}AEQ<NE2Mc5m7Rnfw$rzT)9_X?MD`XU=
+zjG{^QV6}{*nQ`mETG?Z98toT1f4|%fm)*TatuqC?Zq&(c%#=}U^tv%ec4MyW#yr`L
+z1r~N88AH8{VX=&1DRbLxaT|jnV+b>@-7sZ0R?BXz=?BxzGS&;%&culSb6KO&u8}8u
+z$y-l9@<w>3%UrYU!5Z0v7Hfn_-fUUR#Z*g<l>8`(rP0_VJJBkm*vx3hkY}NG&_au@
+zjPckgS?<AR*^}sDKB{GuxlPig5mqwToT34#xD+R9T`GG}Cwr{g)X$z2*&(?hskY_D
+zmh2vwEHgdWB)gH#V@g*pXDOo6C~KYFW)5b`9?X(mEQd+%sQ1xCUoyBKwk(h|l7(nP
+zwuJ~uI8jlE5Ozv`dJ<Q(B{)fPpy=l$dYp<=YR{-A1*n$YsFj@-_H9@o+jyLp$vP~T
+zC!xzOG|PLfQR~8Hc?4VJ5p0(yk%w9t>z6+Dg*dYD*e+wp#c&yAu55WD8%7)vKI&@X
+zJ&K|5TUO8>>!c+lZMQ8T=?-Z&=}Hg6tl>$EsI;4GP#5>rmN~+Ztm2(AM$wS$!f<&K
+zqhvQG%5GH4HcXXK)W|N>%392nUDh~uS-70Ua@h@?CGDU^wHsSxC$`HdN)V7S=KE61
+z2F#M(m~H7j>3V;9o#eIK(x!BIBK&TXF$5uG7jk5mWs#z3K4g%Lp+v?oLPjxC#xN?y
+zuS}Ft_ANdcWppboE=fykWDL_~442AI)X7fFl1DIGc4Ce^g1Pbt=E+VhkOxsOyRb~I
+z<o+A73t`!X6|xhi?8Iu>i8Zo~(Qc8Qmb`Rgv+Tqc*~Ri=+Xq7aLD_|eWEa|G7oLz^
+z_>SztA=!n)vJ211E*zCz?6bx|$Zq7wZsf`+@?<w$GKvBjg-1p)T1GK}dq%yABETb<
+z+LM#q6V-!gFZ`37EByOnzEehVo9xEzGKxE86tBrBiXdbRITpUuB5A>;mQNyWC4V$e
+zMp?6MpF{q}_J(RSyD<tvMv)_<JW_ty!?I(`jnZ54{Ny{Ln9Eejcc^}l)?8ecC>kKG
+z>PfRpwjA9ld!TWvwK9qU$dgeFl2O)xO4ibDOH0XzQ3RqaL$ho{t2}90fG%WO{(~?`
+z`eU+a6BB(?`Vg}uO<ifDmF#1053Z~*>5FYWlYO<lI7L3>#iJbksCXlmrayMPLAsMF
+zaj8<KvHTPNS&W0y{5?F93uQMp$u?|et4}DY=!m>J*>*Zhx=(RKlqr#KqBS>)@8}xh
+zPUA8fx497VBy!}*w1^^K#xTH&1qWL3pwi_ihRcH(A-gSoj-s@ePG4fhj6T`T5~TDx
+z9c`uCZK#uN2|GVqwqcHJ!(7>hd9n@jS+eeB8>jTVmc5%UyHj+%4W?{E6GtO$EDfad
+zYuRd@v~>OmHp_$9A`fD_JeZ>MJ$O(a#6$8RXik4v9>g>9Adbp|c*TlOb1>Y}DixKG
+z1tzL0R<Or1!#Ybyt253NDO9l))yYMk>`6J(W%(HuAE$aIl|%m$-mr4$Ypfi42-!3A
+z*`=tPIb%sFrp#Qlq!e{m&Cp9xH-F*PrC7OW;rvppTta8-mMpre6m^_)r`)>+2jy0!
+zO#I5Q^6`|*cW|klpQqoM4Gk?DF^~6`H*Q+hfZBD<O{*}OR%TGa`?1!l0%hz~UO$_U
+zv#htQYP?E7?_AZ8BW@R4#R4%MahyRE*YLbQTjlFPcM8zkJI7)q2BQcr+zbsmcJR#m
+zMrfFiFT#QO&~X!ghj@NFpZVsTKQ_aOFW_>F$8cUP$iTgD;M>^4YaCy*j%f`#6Zi11
+zFX5{xSM25E-JD|>iX!CVE-u-HyR9?(`1?!v3V#z_CvL+o?8cXIhqY!wJsQJnDTE6B
+z8iY(_CVo-L0OtKMdN&`f#9$=<rae9BEkN%yQ+s-*NUeoXy-fZk5Q1i{hfo{2&=@ls
+z#~q9tp+txgMrz%Ju3Nzr?B5y|;0u_JF+6fb<V7qjscqFJ$pNkX2wvS0*7^>ODrG}7
+pp3$q7AllQrUa1|`YkIdXQ5g<xThr>zbjb7oO$hN-dM7s({XYi#z(fE5
+
+literal 0
+HcmV?d00001
+
+diff --git a/ZalithLauncher/src/main/res/font/pixel_sans_700.ttf b/ZalithLauncher/src/main/res/font/pixel_sans_700.ttf
+new file mode 100644
+index 0000000000000000000000000000000000000000..914b58c20174406ea32ac57251cf965e2d35a5c3
+GIT binary patch
+literal 23532
+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
+
+literal 0
+HcmV?d00001
+
+diff --git a/ZalithLauncher/src/main/res/values-es/strings_bedrava.xml b/ZalithLauncher/src/main/res/values-es/strings_bedrava.xml
+new file mode 100644
+index 0000000..96ce463
+--- /dev/null
++++ b/ZalithLauncher/src/main/res/values-es/strings_bedrava.xml
+@@ -0,0 +1,10 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <string name="theme_color_bedrock">Bedrock</string>
++    <string name="bedrava_unofficial_notice">Versión modificada no oficial de Zalith Launcher 2 (GPL-3.0)</string>
++    <string name="bedrava_boost_pack">Pack de rendimiento</string>
++    <string name="bedrava_boost_installing">Instalando %1$s…</string>
++    <string name="bedrava_boost_done">Listo: %1$d instalados, %2$d no disponibles para esta versión</string>
++    <string name="bedrava_boost_needs_fabric">Esta versión no tiene Fabric. Instalá primero una versión con Fabric desde Descargas.</string>
++    <string name="bedrava_boost_failed">No se pudo instalar el pack. Revisá la conexión.</string>
++</resources>
+diff --git a/ZalithLauncher/src/main/res/values/strings_bedrava.xml b/ZalithLauncher/src/main/res/values/strings_bedrava.xml
+new file mode 100644
+index 0000000..b8c78ad
+--- /dev/null
++++ b/ZalithLauncher/src/main/res/values/strings_bedrava.xml
+@@ -0,0 +1,10 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <string name="theme_color_bedrock">Bedrock</string>
++    <string name="bedrava_unofficial_notice">Unofficial modified version of Zalith Launcher 2 (GPL-3.0)</string>
++    <string name="bedrava_boost_pack">Performance pack</string>
++    <string name="bedrava_boost_installing">Installing %1$s…</string>
++    <string name="bedrava_boost_done">Done: %1$d installed, %2$d not available for this version</string>
++    <string name="bedrava_boost_needs_fabric">This version has no Fabric. Install a Fabric version from Downloads first.</string>
++    <string name="bedrava_boost_failed">Could not install the pack. Check your connection.</string>
++</resources>
+-- 
+2.43.0
+
